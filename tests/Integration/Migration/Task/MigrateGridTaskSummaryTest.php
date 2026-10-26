@@ -93,6 +93,30 @@ final class MigrateGridTaskSummaryTest extends MigrationTestCase
         );
     }
 
+    public function testADryRunListsTheSharedAreasAndFlagsOneThePageSelectionSplits(): void
+    {
+        $pageOne = $this->pageId('page_one');
+        $pageTwo = $this->pageId('page_two');
+        $pageThree = $this->pageId('page_three');
+        $this->seeder->seedPage($pageOne, 100);
+        $this->seeder->seedPageSharingArea($pageTwo, 100);
+        $this->seeder->seedPageSharingArea($pageThree, 100);
+        $this->seeder->seedElement(1001, 100, self::CONTENT_CLASS, 1, ['Title' => 'Shared block']);
+
+        $result = TaskRunner::run(new MigrateGridTask(), [
+            '--default-viewport' => 'MD',
+            '--zone' => self::ZONE,
+            '--dry-run' => true,
+            '--page-ids' => "{$pageOne},{$pageTwo}",
+        ]);
+
+        self::assertSame(Command::SUCCESS, $result['exitCode'], $result['output']);
+        self::assertStringEndsWith(
+            "\nShared content areas:\n  Area 100: pages {$pageOne}, {$pageTwo}, {$pageThree} (only partly in this run)\n",
+            $result['output'],
+        );
+    }
+
     /**
      * Seed every fixture page with the same legacy rows and blocks on draft and
      * live, and publish it, as a SilverStripe 5 site stores published content.

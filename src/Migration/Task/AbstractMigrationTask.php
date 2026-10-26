@@ -186,6 +186,13 @@ abstract class AbstractMigrationTask extends BuildTask
 
         $logger = Injector::inst()->get(LoggerInterface::class);
         $reader = new LegacyDataReader();
+        $sharedAreas = $reader->getSharedAreas();
+        foreach ($sharedAreas as $areaId => $areaPageIds) {
+            $logger->warning(
+                'Legacy content area {areaId} is used by pages {pageIds}; each of them gets its own copy of its blocks.',
+                ['areaId' => $areaId, 'pageIds' => \implode(', ', $areaPageIds)],
+            );
+        }
         $mapper = $this->buildFieldMapper($adapter, $logger);
         $grouper = new ElementGrouper();
 
@@ -225,8 +232,35 @@ abstract class AbstractMigrationTask extends BuildTask
         }
 
         $this->reportDroppedMedia($droppedMedia, $output, $logger);
+        $this->reportSharedAreas($sharedAreas, $pageIds, $output);
 
         return $exitCode;
+    }
+
+    /**
+     * The legacy areas several pages share, each with all of its pages. A page
+     * the run left out keeps the copy migrated in this run from finding the
+     * items of a copy migrated later, or the other way round.
+     *
+     * @param array<int, list<int>> $sharedAreas area ID → page IDs
+     * @param list<int>|null $pageIds the pages this run was limited to
+     */
+    private function reportSharedAreas(array $sharedAreas, ?array $pageIds, PolyOutput $output): void
+    {
+        if ($sharedAreas === []) {
+            return;
+        }
+
+        $output->writeln('Shared content areas:');
+        foreach ($sharedAreas as $areaId => $areaPageIds) {
+            $partly = $pageIds !== null && \array_diff($areaPageIds, $pageIds) !== [];
+            $output->writeln(\sprintf(
+                '  Area %d: pages %s%s',
+                $areaId,
+                \implode(', ', $areaPageIds),
+                $partly ? ' (only partly in this run)' : '',
+            ));
+        }
     }
 
     /**
