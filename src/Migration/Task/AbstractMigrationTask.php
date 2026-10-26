@@ -238,9 +238,9 @@ abstract class AbstractMigrationTask extends BuildTask
     }
 
     /**
-     * The legacy areas several pages share, each with all of its pages. A page
-     * the run left out keeps the copy migrated in this run from finding the
-     * items of a copy migrated later, or the other way round.
+     * The legacy areas several pages share, each with all of its pages. An area
+     * with a page the run left out is marked: that page's copy is written by
+     * another run, which cannot hand it the items the first copy took.
      *
      * @param array<int, list<int>> $sharedAreas area ID → page IDs
      * @param list<int>|null $pageIds the pages this run was limited to
