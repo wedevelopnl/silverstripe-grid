@@ -604,8 +604,7 @@ class GridElement extends DataObject
     /**
      * Assigns a default "{Type} {N}" title when Title is empty.
      *
-     * N is the count of same-type siblings under the same parent + 1,
-     * producing a stable, DB-persisted title that survives reordering.
+     * Persisted at write time, so the title is stable and survives reordering.
      */
     private function ensureDefaultTitle(): void
     {
@@ -613,6 +612,18 @@ class GridElement extends DataObject
             return;
         }
 
+        $this->Title = $this->getDefaultTitle();
+    }
+
+    /**
+     * The "{Type} {N}" title an untitled write of this element would persist,
+     * where N is the count of same-type siblings under the same parent + 1.
+     *
+     * The count is of the siblings that exist when this is called, so it gives
+     * the title for the element's position only until a later sibling is written.
+     */
+    public function getDefaultTitle(): string
+    {
         $siblingCount = static::get()
             ->filter([
                 'ParentID' => $this->ParentID,
@@ -620,7 +631,7 @@ class GridElement extends DataObject
             ])->exclude(['ID' => $this->ID])
             ->count();
 
-        $this->Title = _t(
+        return _t(
             static::class . '.DEFAULT_TITLE',
             '{type} {count}',
             ['type' => $this->getType(), 'count' => $siblingCount + 1],

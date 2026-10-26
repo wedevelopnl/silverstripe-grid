@@ -58,7 +58,9 @@ final class DraftHierarchyWriter
                 /** @var positive-int $rowId */
                 $rowId = (int) $row->ID;
                 if ($migrationRow->legacyRow !== null) {
-                    $idMap->recordRow($migrationRow->legacyRow->id, $rowId);
+                    // Asked before the next Row is written, so it is the default
+                    // for this Row's position even when the legacy row was titled.
+                    $idMap->recordRow($migrationRow->legacyRow->id, $rowId, $row->getDefaultTitle());
                 }
 
                 foreach ($migrationRow->columns as $migrationColumn) {
