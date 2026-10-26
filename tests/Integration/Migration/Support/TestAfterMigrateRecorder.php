@@ -22,7 +22,7 @@ final class TestAfterMigrateRecorder extends Extension implements TestOnly
     /** @var list<array{element: int, legacy: int, context: MigratedElementContext}> */
     public static array $calls = [];
 
-    /** Page whose draft call throws after it was recorded; null never throws. */
+    /** Page whose live call throws after it was recorded, once both stages hold its writes; null never throws. */
     public static ?int $failOnPage = null;
 
     public static function reset(): void
@@ -35,7 +35,7 @@ final class TestAfterMigrateRecorder extends Extension implements TestOnly
     {
         self::$calls[] = ['element' => (int) $this->getOwner()->ID, 'legacy' => $legacy->id, 'context' => $context];
 
-        if ($context->pageId === self::$failOnPage) {
+        if ($context->pageId === self::$failOnPage && $context->stage === MigratedElementContext::LIVE) {
             throw new RuntimeException('Deliberate onAfterMigrate failure');
         }
     }
