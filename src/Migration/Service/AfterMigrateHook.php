@@ -4,11 +4,10 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Migration\Service;
 
-use SilverStripe\Versioned\Versioned;
 use WeDevelop\Grid\Migration\DTO\LegacyElement;
 use WeDevelop\Grid\Migration\DTO\MigratedElementContext;
+use WeDevelop\Grid\Migration\Model\MigratedFirstCopy;
 use WeDevelop\Grid\Model\GridElement;
-use WeDevelop\Grid\Value\FirstCopyRegistry;
 
 /**
  * Fires `onAfterMigrate` on each new element of one page, right after the
@@ -29,7 +28,6 @@ final readonly class AfterMigrateHook
         private int $legacyAreaId,
         private ?string $locale,
         private array $sharedWithPageIds,
-        private FirstCopyRegistry $firstCopies,
     ) {}
 
     /**
@@ -43,29 +41,9 @@ final readonly class AfterMigrateHook
             $this->legacyAreaId,
             $this->locale,
             $this->sharedWithPageIds,
-            $this->firstCopy($legacy->id),
+            MigratedFirstCopy::of($legacy->id),
         );
         // invokeWithExtensions() takes its arguments by reference.
         $element->invokeWithExtensions('onAfterMigrate', $legacy, $context);
-    }
-
-    private function firstCopy(int $legacyId): ?GridElement
-    {
-        $firstCopy = $this->firstCopies->firstCopy($legacyId);
-        if ($firstCopy === null) {
-            return null;
-        }
-
-        return Versioned::withVersionedMode(static function () use ($firstCopy): ?GridElement {
-            Versioned::set_stage(Versioned::DRAFT);
-            $elements = GridElement::get();
-            if ($firstCopy['locale'] !== null) {
-                // A copy from an earlier locale pass is hidden from this one by
-                // Fluent's locale isolation unless the query names its locale.
-                $elements = $elements->setDataQueryParam('Fluent.Locale', $firstCopy['locale']);
-            }
-
-            return $elements->byID($firstCopy['id']);
-        });
     }
 }

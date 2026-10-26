@@ -194,10 +194,10 @@ When legacy content areas are shared by several pages, the run then lists them, 
 ```
 Shared content areas:
   Area 100: pages 4, 9
-  Area 230: pages 12, 13 (only partly in this run)
+  Area 230: pages 12, 13
 ```
 
-`(only partly in this run)` marks an area with a page `--page-ids` left out. That page's copy is written by a later run, which cannot hand it the items the first copy took (see [hook 10](#10-re-attaching-items-a-block-owns)): migrate all pages of a shared area in one run.
+A shared area's pages may be migrated over several runs (`--page-ids`, or a re-run after a failure): a later run's copy is still handed the first copy an earlier run wrote (see [hook 10](#10-re-attaching-items-a-block-owns)).
 
 If a run finishes with failures, the summary line is followed by `Check logs for details.`, the task exits with a non-zero status and the failing page IDs are logged as errors. Pages that failed remain un-migrated and can be re-run after the cause is fixed.
 
@@ -604,7 +604,7 @@ on live for every element that is on the live page, live-only elements included.
 | `pageId`, `legacyAreaId` | The page being migrated and the legacy `ElementalArea` it reads |
 | `locale` | The Fluent locale pass, `null` outside `migrate-grid-with-fluent` |
 | `sharedWithPageIds` | The other pages that use the same legacy area; empty when it is not shared |
-| `firstCopy` | `null` when this element is the first written for `$legacy`. Otherwise the element an earlier page (shared area) or locale pass wrote for it — the one that took the items |
+| `firstCopy` | `null` when this element is the first written for `$legacy`. Otherwise the element an earlier page (shared area) or locale pass wrote for it, in this run or an earlier one — the one that took the items |
 
 The first copy re-points the legacy block's items, on each stage's table; every later
 copy duplicates the first copy's items. With a `has_many` from the block to a
@@ -678,11 +678,14 @@ Rules for an implementation:
   (`Slide_Versions`) keeps the legacy parent.
 - On a Fluent site each locale pass commits on its own, the default locale first. When
   a later pass fails, the earlier locales stay migrated and re-attached; a re-run
-  retries the failed locale only (it has no Sections yet).
-- A shared area migrated over several runs (`--page-ids`) leaves the later run's copy
-  with `firstCopy` `null` and no legacy items left to find. The run flags such an area
-  `(only partly in this run)`; migrate all its pages in one run, or attach the items
-  by hand.
+  retries the failed locale only (it has no Sections yet), and its copy is handed the
+  earlier locale's as `firstCopy`.
+- Which element is a legacy element's first copy is stored in
+  `WeDevelop_Grid_MigratedFirstCopy`, written with each page, so a copy written by a
+  later run (`--page-ids`, a re-run after a failure) is handed the first copy an
+  earlier run wrote. Deleting a migrated page's Sections to migrate it again does not
+  clear those rows: the new copy is handed the deleted one, which is not found, so
+  `firstCopy` is `null` and the items the deleted copy took stay with it.
 
 ## After Migration
 
@@ -695,7 +698,7 @@ Rules for an implementation:
    - On Tailwind targets, Columns with an offset that follow another Column in the same Row (they drop to a new line).
    - Media blocks that relied on Bootstrap CSS classes for alignment or ordering.
 4. Review the log output for `warning` entries — each one corresponds to a clamp, an unresolved mapping, or a `customSectionClass` conflict resolved by Strategy B.
-5. Once you are satisfied, drop the legacy tables manually (`Element`, `Element_Live`, `Element_Versions`, `ElementRow`, `ElementRow_Live`, `ElementContent`, `ElementContent_Live`, `ElementalArea`, `ElementalArea_Live`, any `*_Localised` tables of a Fluent site, any legacy subclass tables, and a hand-added `BaseElement` copy if the site has one) in a separate migration step.
+5. Once you are satisfied, drop the legacy tables manually (`Element`, `Element_Live`, `Element_Versions`, `ElementRow`, `ElementRow_Live`, `ElementContent`, `ElementContent_Live`, `ElementalArea`, `ElementalArea_Live`, any `*_Localised` tables of a Fluent site, any legacy subclass tables, and a hand-added `BaseElement` copy if the site has one) in a separate migration step. Empty `WeDevelop_Grid_MigratedFirstCopy` too once no page or locale is left to migrate; the table itself belongs to the module and comes back on `db:build`.
 
 ## Related Migrations
 

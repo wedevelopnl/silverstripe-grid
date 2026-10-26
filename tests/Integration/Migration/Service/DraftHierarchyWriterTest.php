@@ -26,7 +26,6 @@ use WeDevelop\Grid\Tests\Integration\Migration\Support\TestRowSettingsMigrationE
 use WeDevelop\Grid\Tests\Integration\Support\DisablesAutoScaffolding;
 use WeDevelop\Grid\Tests\Unit\Migration\Support\LegacyElementFactory;
 use WeDevelop\Grid\Value\GridSettings;
-use WeDevelop\Grid\Value\FirstCopyRegistry;
 use WeDevelop\Grid\Value\MigrationIdMap;
 use WeDevelop\Grid\Value\ViewportConfig;
 
@@ -227,7 +226,7 @@ final class DraftHierarchyWriterTest extends SapphireTest
                     self::ZONE,
                     [$this->buildSection($this->gridSettings())],
                     $idMap,
-                    new AfterMigrateHook($pageId, 0, null, [], new FirstCopyRegistry()),
+                    new AfterMigrateHook($pageId, 0, null, []),
                 );
             });
 
@@ -375,7 +374,7 @@ final class DraftHierarchyWriterTest extends SapphireTest
     {
         Versioned::withVersionedMode(function () use ($pageId, $sections, $idMap): void {
             Versioned::set_stage(Versioned::DRAFT);
-            $this->writer->writeDraftHierarchy($pageId, Page::class, self::ZONE, $sections, $idMap, new AfterMigrateHook($pageId, 0, null, [], new FirstCopyRegistry()));
+            $this->writer->writeDraftHierarchy($pageId, Page::class, self::ZONE, $sections, $idMap, new AfterMigrateHook($pageId, 0, null, []));
         });
     }
 }

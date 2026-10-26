@@ -232,20 +232,17 @@ abstract class AbstractMigrationTask extends BuildTask
         }
 
         $this->reportDroppedMedia($droppedMedia, $output, $logger);
-        $this->reportSharedAreas($sharedAreas, $pageIds, $output);
+        $this->reportSharedAreas($sharedAreas, $output);
 
         return $exitCode;
     }
 
     /**
-     * The legacy areas several pages share, each with all of its pages. An area
-     * with a page the run left out is marked: that page's copy is written by
-     * another run, which cannot hand it the items the first copy took.
+     * The legacy areas several pages share, each with all of its pages.
      *
      * @param array<int, list<int>> $sharedAreas area ID → page IDs
-     * @param list<int>|null $pageIds the pages this run was limited to
      */
-    private function reportSharedAreas(array $sharedAreas, ?array $pageIds, PolyOutput $output): void
+    private function reportSharedAreas(array $sharedAreas, PolyOutput $output): void
     {
         if ($sharedAreas === []) {
             return;
@@ -253,13 +250,7 @@ abstract class AbstractMigrationTask extends BuildTask
 
         $output->writeln('Shared content areas:');
         foreach ($sharedAreas as $areaId => $areaPageIds) {
-            $partly = $pageIds !== null && \array_diff($areaPageIds, $pageIds) !== [];
-            $output->writeln(\sprintf(
-                '  Area %d: pages %s%s',
-                $areaId,
-                \implode(', ', $areaPageIds),
-                $partly ? ' (only partly in this run)' : '',
-            ));
+            $output->writeln(\sprintf('  Area %d: pages %s', $areaId, \implode(', ', $areaPageIds)));
         }
     }
 

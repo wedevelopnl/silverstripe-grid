@@ -26,6 +26,7 @@ use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
 use WeDevelop\Grid\Migration\DTO\MigratedElementContext;
+use WeDevelop\Grid\Migration\Model\MigratedFirstCopy;
 use WeDevelop\Grid\Tests\Integration\Migration\Support\MigrationTestCase;
 use WeDevelop\Grid\Tests\Integration\Migration\Support\TestAfterMigrateRecorder;
 use WeDevelop\Grid\Tests\Integration\Migration\Support\MigrationTreeSnapshot;
@@ -2514,6 +2515,23 @@ final class GridMigrationServiceTest extends MigrationTestCase
         $later = TestAfterMigrateRecorder::$calls[1];
         self::assertSame($pageB, $later['context']->pageId);
         self::assertNull($later['context']->firstCopy);
+    }
+
+    public function testACopyWrittenByALaterRunIsHandedTheFirstCopyAnEarlierRunWrote(): void
+    {
+        $pageA = $this->pageId();
+        $pageB = $this->pageId('test_page_2');
+        $this->seeder->seedPage($pageA, 100);
+        $this->seeder->seedPageSharingArea($pageB, 100);
+        $this->seeder->seedElement(1001, 100, self::CONTENT_CLASS, 1, ['Title' => 'Shared']);
+
+        $this->createService()->run(self::DEFAULT_VIEWPORT, self::ZONE, self::VIEWPORT_KEY_MAP, pageIds: [$pageA]);
+        $this->createService()->run(self::DEFAULT_VIEWPORT, self::ZONE, self::VIEWPORT_KEY_MAP, pageIds: [$pageB]);
+
+        [$first, $later] = TestAfterMigrateRecorder::$calls;
+        self::assertSame($pageB, $later['context']->pageId);
+        self::assertInstanceOf(ContentElement::class, $later['context']->firstCopy);
+        self::assertSame($first['element'], (int) $later['context']->firstCopy->ID);
     }
 
     /**

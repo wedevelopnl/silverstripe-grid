@@ -13,10 +13,10 @@ use SilverStripe\Versioned\Versioned;
 use WeDevelop\Grid\Migration\DTO\LegacyElement;
 use WeDevelop\Grid\Migration\DTO\MigrationSection;
 use WeDevelop\Grid\Migration\DTO\MigrationSummary;
+use WeDevelop\Grid\Migration\Model\MigratedFirstCopy;
 use WeDevelop\Grid\Migration\Strategy\RowMappingStrategy;
 use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
-use WeDevelop\Grid\Value\FirstCopyRegistry;
 use WeDevelop\Grid\Value\MigrationIdMap;
 
 /**
@@ -39,8 +39,6 @@ final class GridMigrationService
 
     /**
      * @param non-empty-string|null $locale the Fluent locale pass this service migrates, null without Fluent
-     * @param FirstCopyRegistry $firstCopies shared by every pass of one run, so a later locale pass
-     *     finds the copies an earlier one wrote
      */
     public function __construct(
         private readonly LegacyElementSource $reader,
@@ -49,7 +47,6 @@ final class GridMigrationService
         private readonly LoggerInterface $logger,
         private readonly DroppedMediaCollector $droppedMedia,
         private readonly ?string $locale = null,
-        private readonly FirstCopyRegistry $firstCopies = new FirstCopyRegistry(),
     ) {
         $this->draftWriter = new DraftHierarchyWriter($mapper, $droppedMedia);
         $this->livePublisher = new LivePublisher($mapper, $this->draftWriter, $logger, $strategy, $droppedMedia);
@@ -127,7 +124,6 @@ final class GridMigrationService
                     $areaId,
                     $this->locale,
                     \array_values(\array_diff($sharedAreas[$areaId] ?? [], [$pageId])),
-                    $this->firstCopies,
                 );
 
                 try {
@@ -277,10 +273,10 @@ final class GridMigrationService
             }
 
             $this->pageFlagWriter->setUseGridOnPage($pageId, true, includeLive: $liveElements !== []);
+            MigratedFirstCopy::record($idMap, $this->locale);
 
             $conn->transactionEnd();
             $this->droppedMedia->commit();
-            $this->firstCopies->commit($idMap, $this->locale);
         } catch (Throwable $exception) {
             $conn->transactionRollback();
             $this->droppedMedia->rollback();
