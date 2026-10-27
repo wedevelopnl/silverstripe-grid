@@ -36,6 +36,8 @@ final class MigrateGridTaskGuardTest extends SapphireTest
 
     protected function tearDown(): void
     {
+        $this->seeder->removeLocalisedAreaTables('Page');
+        $this->seeder->removeElementalAreaColumn('Page');
         $this->seeder->removeFieldLocalisedTables();
         $this->seeder->removeLocaleIdColumn();
         $this->seeder->dropTables();
@@ -98,6 +100,21 @@ final class MigrateGridTaskGuardTest extends SapphireTest
             . 'locale context and would write records invisible in every locale.',
             $result['output'],
         );
+    }
+
+    public function testRefusesWhenAPageTablePointsEachLocaleAtItsOwnArea(): void
+    {
+        // Elements not localised at all: only the page's area is per locale.
+        $this->seeder->addElementalAreaColumn('Page');
+        $this->seeder->addLocalisedAreaTables('Page');
+
+        $result = TaskRunner::run(
+            new MigrateGridTask(),
+            ['--default-viewport' => 'MD', '--zone' => 'main', '--dry-run' => true],
+        );
+
+        self::assertSame(Command::FAILURE, $result['exitCode'], 'must refuse on per-locale areas');
+        self::assertStringContainsString('Run "migrate-grid-with-fluent" instead', $result['output']);
     }
 
     public function testRefusesCleanlyOnAmbiguousLegacyConfiguration(): void
