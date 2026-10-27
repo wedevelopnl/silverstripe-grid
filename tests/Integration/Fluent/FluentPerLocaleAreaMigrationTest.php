@@ -5,19 +5,12 @@ declare(strict_types=1);
 namespace WeDevelop\Grid\Tests\Integration\Fluent;
 
 use PHPUnit\Framework\Attributes\CoversClass;
-use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use SilverStripe\Versioned\Versioned;
 use TractorCow\Fluent\State\FluentState;
 use WeDevelop\Grid\Migration\DTO\MigrationSummary;
-use WeDevelop\Grid\Migration\Service\DroppedMediaCollector;
-use WeDevelop\Grid\Migration\Service\ElementGrouper;
-use WeDevelop\Grid\Migration\Service\FieldMapper;
 use WeDevelop\Grid\Migration\Service\FluentMigrationOrchestrator;
-use WeDevelop\Grid\Migration\Service\LegacyDataReader;
-use WeDevelop\Grid\Migration\Service\LegacyLocalisationDetector;
 use WeDevelop\Grid\Migration\Service\LocaleScopedLegacySource;
-use WeDevelop\Grid\Migration\Strategy\RowPerSectionStrategy;
 use WeDevelop\Grid\Model\Column;
 use WeDevelop\Grid\Model\ContentElement;
 use WeDevelop\Grid\Tests\Integration\Support\RecordingLogger;
@@ -65,20 +58,6 @@ final class FluentPerLocaleAreaMigrationTest extends FluentMigrationTestCase
             $this->seeder->seedElement(7200, self::NL_AREA, self::CONTENT_CLASS, 1, ['Title' => 'Welkom'], $stage);
             $this->seeder->seedContentMedia(7200, [], $stage);
         }
-    }
-
-    private function makeOrchestrator(LoggerInterface $logger): FluentMigrationOrchestrator
-    {
-        $mapper = new FieldMapper();
-
-        return new FluentMigrationOrchestrator(
-            new LegacyDataReader(),
-            new LegacyLocalisationDetector(),
-            $mapper,
-            new RowPerSectionStrategy(new ElementGrouper(), $mapper, self::DEFAULT_VIEWPORT, self::VIEWPORT_KEY_MAP),
-            $logger,
-            new DroppedMediaCollector(),
-        );
     }
 
     /** @return list<string> */

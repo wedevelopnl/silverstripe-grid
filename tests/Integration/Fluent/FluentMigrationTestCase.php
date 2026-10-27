@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Tests\Integration\Fluent;
 
+use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use SilverStripe\Dev\SapphireTest;
 use SilverStripe\Versioned\Versioned;
@@ -92,20 +93,23 @@ abstract class FluentMigrationTestCase extends SapphireTest
      */
     protected function runMigration(int $pageId): int
     {
+        $summaries = $this->makeOrchestrator()->run(self::DEFAULT_VIEWPORT, self::ZONE, self::VIEWPORT_KEY_MAP, false, [$pageId]);
+
+        return \array_sum(\array_map(static fn (MigrationSummary $summary): int => $summary->pagesFailed, $summaries));
+    }
+
+    protected function makeOrchestrator(LoggerInterface $logger = new NullLogger()): FluentMigrationOrchestrator
+    {
         $mapper = new FieldMapper();
-        $strategy = new RowPerSectionStrategy(new ElementGrouper(), $mapper, self::DEFAULT_VIEWPORT, self::VIEWPORT_KEY_MAP);
-        $orchestrator = new FluentMigrationOrchestrator(
+
+        return new FluentMigrationOrchestrator(
             new LegacyDataReader(),
             new LegacyLocalisationDetector(),
             $mapper,
-            $strategy,
-            new NullLogger(),
+            new RowPerSectionStrategy(new ElementGrouper(), $mapper, self::DEFAULT_VIEWPORT, self::VIEWPORT_KEY_MAP),
+            $logger,
             new DroppedMediaCollector(),
         );
-
-        $summaries = $orchestrator->run(self::DEFAULT_VIEWPORT, self::ZONE, self::VIEWPORT_KEY_MAP, false, [$pageId]);
-
-        return \array_sum(\array_map(static fn (MigrationSummary $summary): int => $summary->pagesFailed, $summaries));
     }
 
     /** @return list<string> */
