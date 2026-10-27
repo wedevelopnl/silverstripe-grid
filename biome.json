@@ -1,5 +1,5 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.5.14/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.6.3/schema.json",
   "vcs": {
     "enabled": true,
     "clientKind": "git",
@@ -56,7 +56,10 @@
       "complexity": {
         "noUselessUndefined": "error",
         "noUselessReturn": "error",
-        "noImportantStyles": "error"
+        "noImportantStyles": "error",
+        "noUnnecessaryTemplateExpression": "error",
+        "noPlaywrightUselessAwait": "error",
+        "noExcessiveSelectorClasses": "error"
       },
       "correctness": {
         "useExhaustiveDependencies": "warn",
@@ -75,7 +78,9 @@
         "noUnknownPseudoElement": "error",
         "noUnknownTypeSelector": "error",
         "noUnknownUnit": "error",
-        "noUnmatchableAnbSelector": "error"
+        "noUnmatchableAnbSelector": "error",
+        "noComponentHookFactories": "error",
+        "noPlaywrightMissingAwait": "error"
       },
       "performance": {
         "noAwaitInLoops": "error",
@@ -92,7 +97,10 @@
         "useThrowOnlyError": "error",
         "noDescendingSpecificity": "error",
         "noHexColors": "error",
-        "noValueAtRule": "error"
+        "noValueAtRule": "error",
+        "noPlaywrightElementHandle": "error",
+        "noPlaywrightWaitForSelector": "error",
+        "noPlaywrightEval": "error"
       },
       "suspicious": {
         "noExplicitAny": "error",
@@ -122,41 +130,33 @@
         "noEmptyBlock": "error",
         "noImportantInKeyframe": "error",
         "noShorthandPropertyOverrides": "error",
-        "noUnknownAtRules": "error"
-      },
-      "nursery": {
-        "noFloatingPromises": "error",
-        "noMisusedPromises": "error",
-        "noUnsafePlusOperands": "error",
+        "noUnknownAtRules": "error",
         "noJsxLeakedDollar": "error",
         "noReactStringRefs": "error",
-        "noComponentHookFactories": "error",
-        "noUselessTypeConversion": "error",
-        "noUnnecessaryTemplateExpression": "error",
-        "noImpliedEval": "error",
         "noIdenticalTestTitle": "error",
         "noConditionalExpect": "error",
-        "useAwaitThenable": "error",
-        "useNullishCoalescing": "error",
         "noPlaywrightWaitForTimeout": "warn",
         "noPlaywrightNetworkidle": "error",
         "noPlaywrightForceOption": "error",
-        "noPlaywrightElementHandle": "error",
-        "noPlaywrightMissingAwait": "error",
-        "noPlaywrightWaitForSelector": "error",
         "noPlaywrightWaitForNavigation": "error",
         "noPlaywrightPagePause": "error",
-        "noPlaywrightEval": "error",
-        "noPlaywrightUselessAwait": "error",
         "noDuplicateSelectors": "error",
-        "noExcessiveSelectorClasses": "error",
-        "noInvalidPropertyInitValue": "error",
         "useBaseline": {
           "level": "error",
           "options": {
             "available": "newly"
           }
         }
+      },
+      "nursery": {
+        "noFloatingPromises": "error",
+        "noMisusedPromises": "error",
+        "noUnsafePlusOperands": "error",
+        "noUselessTypeConversion": "error",
+        "noImpliedEval": "error",
+        "useAwaitThenable": "error",
+        "useNullishCoalescing": "error",
+        "noInvalidPropertyInitValue": "error"
       },
       "security": {
         "noScriptUrl": "error"
@@ -179,7 +179,8 @@
       "linter": {
         "rules": {
           "correctness": {
-            "noNestedComponentDefinitions": "off"
+            "noNestedComponentDefinitions": "off",
+            "noComponentHookFactories": "off"
           },
           "style": {
             "noNonNullAssertion": "off"
@@ -190,9 +191,6 @@
           "suspicious": {
             "noMisplacedAssertion": "off",
             "noConsole": "off"
-          },
-          "nursery": {
-            "noComponentHookFactories": "off"
           }
         }
       }
@@ -209,11 +207,11 @@
           },
           "suspicious": {
             "noMisplacedAssertion": "off",
-            "noSkippedTests": "off"
-          },
-          "nursery": {
-            "noComponentHookFactories": "off",
+            "noSkippedTests": "off",
             "noConditionalExpect": "off"
+          },
+          "correctness": {
+            "noComponentHookFactories": "off"
           }
         }
       }

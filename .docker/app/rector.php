@@ -4,8 +4,7 @@ declare(strict_types=1);
 
 use Netwerkstatt\SilverstripeRector\Set\SilverstripeLevelSetList;
 use Netwerkstatt\SilverstripeRector\Set\SilverstripeSetList;
-use Rector\CodeQuality\Rector\Identical\FlipTypeControlToUseExclusiveTypeRector;
-use Rector\CodingStyle\Rector\PostInc\PostIncDecToPreIncDecRector;
+use Rector\CodeQuality\Rector\If_\ExplicitNullableObjectInstanceRector;
 use Rector\Config\RectorConfig;
 
 return RectorConfig::configure()
@@ -27,6 +26,5 @@ return RectorConfig::configure()
     ])
     ->withSkip([
         // Subjective style — see CLAUDE.md "Rector" section for rationale.
-        FlipTypeControlToUseExclusiveTypeRector::class,
-        PostIncDecToPreIncDecRector::class,
+        ExplicitNullableObjectInstanceRector::class,
     ]);
