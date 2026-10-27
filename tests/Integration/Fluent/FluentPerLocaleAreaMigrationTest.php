@@ -8,6 +8,7 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\Versioned\Versioned;
+use TractorCow\Fluent\Extension\FluentIsolatedExtension;
 use TractorCow\Fluent\Model\FallbackLocale;
 use TractorCow\Fluent\Model\Locale;
 use TractorCow\Fluent\State\FluentState;
@@ -16,7 +17,9 @@ use WeDevelop\Grid\Migration\Service\FluentMigrationOrchestrator;
 use WeDevelop\Grid\Migration\Service\LocaleScopedLegacySource;
 use WeDevelop\Grid\Model\Column;
 use WeDevelop\Grid\Model\ContentElement;
+use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Tests\Integration\Migration\Service\TestPage;
+use WeDevelop\Grid\Tests\Integration\Migration\Support\TestAfterMigrateRecorder;
 use WeDevelop\Grid\Tests\Integration\Support\RecordingLogger;
 
 /**
@@ -35,6 +38,12 @@ final class FluentPerLocaleAreaMigrationTest extends FluentMigrationTestCase
     /** @var list<class-string> */
     protected static $extra_dataobjects = [TestPage::class];
 
+    /** @var array<class-string, list<class-string>> */
+    protected static $required_extensions = [
+        GridElement::class => [FluentIsolatedExtension::class],
+        ContentElement::class => [TestAfterMigrateRecorder::class],
+    ];
+
     private const int EN_AREA = 100;
     private const int NL_AREA = 200;
 
@@ -42,6 +51,7 @@ final class FluentPerLocaleAreaMigrationTest extends FluentMigrationTestCase
     {
         parent::setUp();
         $this->seeder->addLocalisedAreaTables('Page');
+        TestAfterMigrateRecorder::reset();
     }
 
     /**
@@ -175,6 +185,33 @@ final class FluentPerLocaleAreaMigrationTest extends FluentMigrationTestCase
             ['Draft welcome', 'Live welcome'],
             $draft,
             'a live-only block is written to both stages, as on a single-locale site',
+        );
+    }
+
+    public function testAfterMigrateNamesTheAreaEachElementWasReadFrom(): void
+    {
+        $pageId = $this->pageId();
+        $this->seeder->seedPage($pageId, self::EN_AREA);
+        $this->seeder->seedLocalisedArea('Page', $pageId, 'en_US', self::EN_AREA);
+        $this->seeder->seedLocalisedArea('Page', $pageId, 'en_US', 300, 'live');
+        $this->seeder->seedElement(7100, self::EN_AREA, self::CONTENT_CLASS, 1, ['Title' => 'Draft welcome']);
+        $this->seeder->seedContentMedia(7100);
+        $this->seeder->seedElement(7300, 300, self::CONTENT_CLASS, 1, ['Title' => 'Live welcome'], 'live');
+        $this->seeder->seedContentMedia(7300, [], 'live');
+
+        self::assertSame(0, $this->runMigration($pageId));
+
+        $english = \array_filter(
+            TestAfterMigrateRecorder::$calls,
+            static fn (array $call): bool => $call['context']->locale === 'en_US',
+        );
+        self::assertSame(
+            [[7100, 'draft', self::EN_AREA], [7300, 'draft', 300], [7300, 'live', 300]],
+            \array_values(\array_map(
+                static fn (array $call): array => [$call['legacy'], $call['context']->stage, $call['context']->legacyAreaId],
+                $english,
+            )),
+            'a live-only element is read from the live area, whichever stage it is written to',
         );
     }
 

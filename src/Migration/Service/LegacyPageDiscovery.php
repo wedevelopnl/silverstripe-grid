@@ -368,8 +368,9 @@ final class LegacyPageDiscovery
     }
 
     /**
-     * Every legacy area that more than one eligible draft page uses, with all
-     * of those pages. Each page migrates its own copy of such an area.
+     * Every legacy area that more than one eligible page uses, as its draft or
+     * its live area, with all of those pages. Each page migrates its own copy
+     * of such an area.
      *
      * Structural: it ignores any page filter, so a run over some of the pages
      * still sees the pages it leaves out.
@@ -402,7 +403,11 @@ final class LegacyPageDiscovery
     {
         $pagesByArea = [];
         foreach ($pages as $page) {
-            $pagesByArea[$page['areaId']][] = $page['pageId'];
+            foreach (\array_unique([$page['areaId'], $page['liveAreaId']]) as $areaId) {
+                if ($areaId > 0) {
+                    $pagesByArea[$areaId][] = $page['pageId'];
+                }
+            }
         }
 
         $shared = \array_filter($pagesByArea, static fn (array $pageIds): bool => \count($pageIds) > 1);
