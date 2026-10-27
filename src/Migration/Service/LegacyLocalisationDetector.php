@@ -9,7 +9,10 @@ use SilverStripe\ORM\DB;
 use WeDevelop\Grid\Migration\Value\LegacyLocalisationModel;
 
 /**
- * Detects the legacy Fluent localisation model from database table shape.
+ * Detects the legacy Fluent localisation from database table shape, on two
+ * independent axes: how the elements are localised ({@see detect()}) and
+ * which page tables point each locale at its own area
+ * ({@see perLocaleAreaTables()}).
  *
  * Pure raw-SQL inspection — never introspects legacy element classes (they
  * are uninstalled at migration time because this module conflicts with
@@ -18,6 +21,13 @@ use WeDevelop\Grid\Migration\Value\LegacyLocalisationModel;
 final class LegacyLocalisationDetector
 {
     private const string LOCALISED_TABLE = LegacyElementReader::ELEMENT_TABLE . '_Localised';
+
+    private readonly LegacyPageDiscovery $discovery;
+
+    public function __construct()
+    {
+        $this->discovery = new LegacyPageDiscovery();
+    }
 
     public function detect(): LegacyLocalisationModel
     {
@@ -51,6 +61,27 @@ final class LegacyLocalisationDetector
 
     public function hasLocalisedContent(): bool
     {
-        return $this->detect() !== LegacyLocalisationModel::None;
+        return $this->detect() !== LegacyLocalisationModel::None || $this->perLocaleAreaTables() !== [];
+    }
+
+    /**
+     * Page tables whose `<Table>_Localised` companion carries ElementalAreaID.
+     *
+     * @return list<string>
+     */
+    public function perLocaleAreaTables(): array
+    {
+        return $this->discovery->getPerLocaleAreaTables();
+    }
+
+    /**
+     * Page tables whose per-locale ElementalAreaID dev/build moved to
+     * `_obsolete_<Table>_Localised`.
+     *
+     * @return list<string>
+     */
+    public function setAsideAreaTables(): array
+    {
+        return $this->discovery->getSetAsideAreaTables();
     }
 }

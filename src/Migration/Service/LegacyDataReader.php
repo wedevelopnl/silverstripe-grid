@@ -29,6 +29,8 @@ use WeDevelop\Grid\Migration\Value\LegacyLocalisationModel;
  * - Plain dnadesign/silverstripe-elemental: pages have only ElementalAreaID (no UseElementalGrid)
  *
  * When UseElementalGrid is absent, all pages with ElementalAreaID > 0 are eligible.
+ *
+ * @phpstan-import-type EligiblePage from LegacyElementSource
  */
 final class LegacyDataReader implements LegacyElementSource
 {
@@ -46,16 +48,35 @@ final class LegacyDataReader implements LegacyElementSource
 
     /**
      * @param list<int>|null $pageIds
-     * @return list<array{pageId: int, areaId: int, pageClassName: class-string}>
+     * @return list<EligiblePage>
      */
     public function getEligiblePages(string $stage, ?array $pageIds = null): array
     {
         return $this->discovery->getEligiblePages($stage, $pageIds);
     }
 
+    /**
+     * @param non-empty-list<non-empty-string> $chain
+     * @param list<int>|null $pageIds
+     * @return list<EligiblePage>
+     */
+    public function getEligiblePagesInLocale(array $chain, bool $isDefault, bool $withSharedAreaTables, ?array $pageIds = null): array
+    {
+        return $this->discovery->getEligiblePagesInLocale($chain, $isDefault, $withSharedAreaTables, $pageIds);
+    }
+
     public function getSharedAreas(): array
     {
         return $this->discovery->getSharedAreas();
+    }
+
+    /**
+     * @param non-empty-list<non-empty-string> $chain
+     * @return array<int, list<int>> area ID → page IDs, ascending
+     */
+    public function getSharedAreasInLocale(array $chain, bool $isDefault, bool $withSharedAreaTables): array
+    {
+        return $this->discovery->getSharedAreasInLocale($chain, $isDefault, $withSharedAreaTables);
     }
 
     /**
