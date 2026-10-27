@@ -26,13 +26,6 @@ final class MigrateGridWithFluentTaskSummaryTest extends FluentMigrationTestCase
         ContentElement::class => [BlockMediaExtension::class],
     ];
 
-    protected function tearDown(): void
-    {
-        $this->seeder->removeLocalisedAreaTables('Page');
-        $this->seeder->removeLocalisedAreaTables('Page', '_obsolete_');
-        parent::tearDown();
-    }
-
     public function testPrintsOneSummaryLinePerLocaleWhenEachLocaleHasItsOwnArea(): void
     {
         $pageId = $this->pageId();

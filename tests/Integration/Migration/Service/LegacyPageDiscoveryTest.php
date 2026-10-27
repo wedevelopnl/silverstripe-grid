@@ -36,8 +36,7 @@ final class LegacyPageDiscoveryTest extends MigrationTestCase
 
     protected function tearDown(): void
     {
-        $this->seeder->removeLocalisedAreaTables('Page');
-        $this->seeder->removeLocalisedAreaTables('Page', '_obsolete_');
+        $this->seeder->removeLocalisedAreaTables();
         parent::tearDown();
     }
 
@@ -241,7 +240,11 @@ final class LegacyPageDiscoveryTest extends MigrationTestCase
     {
         DB::query('CREATE TABLE "Page_Localised" ("ID" int NOT NULL PRIMARY KEY, "RecordID" int NOT NULL, "Locale" varchar(10) NOT NULL)');
 
-        self::assertSame([], $this->discovery->getPerLocaleAreaTables());
+        try {
+            self::assertSame([], $this->discovery->getPerLocaleAreaTables());
+        } finally {
+            DB::query('DROP TABLE "Page_Localised"');
+        }
     }
 
     public function testSetAsideAreaTablesNameTheTableWhoseAreaCompanionsDevBuildRenamed(): void

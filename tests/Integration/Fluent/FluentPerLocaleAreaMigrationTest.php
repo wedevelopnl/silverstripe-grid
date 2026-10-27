@@ -43,12 +43,6 @@ final class FluentPerLocaleAreaMigrationTest extends FluentMigrationTestCase
         $this->seeder->addLocalisedAreaTables('Page');
     }
 
-    protected function tearDown(): void
-    {
-        $this->seeder->removeLocalisedAreaTables('Page');
-        parent::tearDown();
-    }
-
     /**
      * en_US holds "Welcome" and nl_NL holds "Welkom", each in its own area on
      * both stages. The base column holds whichever locale was saved last.
