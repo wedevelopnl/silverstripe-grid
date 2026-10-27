@@ -6,6 +6,8 @@ namespace WeDevelop\Grid\Tests\Integration\Migration\Service;
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use Page;
+use SilverStripe\ORM\DataObject;
+use SilverStripe\ORM\DB;
 use WeDevelop\Grid\Migration\Service\LegacyPageDiscovery;
 use WeDevelop\Grid\Tests\Integration\Migration\Support\MigrationTestCase;
 
@@ -32,6 +34,13 @@ final class LegacyPageDiscoveryTest extends MigrationTestCase
         $this->discovery = new LegacyPageDiscovery();
     }
 
+    protected function tearDown(): void
+    {
+        $this->seeder->removeLocalisedAreaTables('Page');
+        $this->seeder->removeLocalisedAreaTables('Page', '_obsolete_');
+        parent::tearDown();
+    }
+
     public function testGetEligiblePagesReturnsGridEnabledPages(): void
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
@@ -42,6 +51,7 @@ final class LegacyPageDiscoveryTest extends MigrationTestCase
         self::assertCount(1, $result);
         self::assertSame((int) $page->ID, $result[0]['pageId']);
         self::assertSame(100, $result[0]['areaId']);
+        self::assertSame(100, $result[0]['liveAreaId'], 'an area shared by every locale is one area on both stages');
         self::assertSame(Page::class, $result[0]['pageClassName']);
     }
 
@@ -216,5 +226,165 @@ final class LegacyPageDiscoveryTest extends MigrationTestCase
         $this->seeder->seedPage((int) $this->objFromFixture(Page::class, 'test_page_2')->ID, 200);
 
         self::assertSame([], $this->discovery->getSharedAreas());
+    }
+
+    public function testPerLocaleAreaTablesAreThePageTablesWhoseLocalisedCompanionCarriesTheArea(): void
+    {
+        self::assertSame([], $this->discovery->getPerLocaleAreaTables());
+
+        $this->seeder->addLocalisedAreaTables('Page');
+
+        self::assertSame(['Page'], (new LegacyPageDiscovery())->getPerLocaleAreaTables());
+    }
+
+    public function testACompanionWithoutAnAreaColumnDoesNotMakeTheTablePerLocale(): void
+    {
+        DB::query('CREATE TABLE "Page_Localised" ("ID" int NOT NULL PRIMARY KEY, "RecordID" int NOT NULL, "Locale" varchar(10) NOT NULL)');
+
+        self::assertSame([], $this->discovery->getPerLocaleAreaTables());
+    }
+
+    public function testSetAsideAreaTablesNameTheTableWhoseAreaCompanionDevBuildRenamed(): void
+    {
+        $this->seeder->addLocalisedAreaTables('Page', '_obsolete_');
+
+        self::assertSame(['Page'], $this->discovery->getSetAsideAreaTables());
+        self::assertSame([], $this->discovery->getPerLocaleAreaTables());
+    }
+
+    public function testASetAsideCompanionIsHarmlessOnceTheTableCarriesTheAreaAgain(): void
+    {
+        $this->seeder->addLocalisedAreaTables('Page', '_obsolete_');
+        $this->seeder->addLocalisedAreaTables('Page');
+
+        self::assertSame([], $this->discovery->getSetAsideAreaTables());
+    }
+
+    public function testEachStageReadsItsAreaFromItsOwnLocalisedTable(): void
+    {
+        $pageId = $this->pageId();
+        $this->seeder->seedPage($pageId, 900);
+        $this->seeder->addLocalisedAreaTables('Page');
+        $this->seeder->seedLocalisedArea('Page', $pageId, 'en_US', 100);
+        $this->seeder->seedLocalisedArea('Page', $pageId, 'en_US', 300, 'live');
+        $this->seeder->seedLocalisedArea('Page', $pageId, 'nl_NL', 200);
+
+        self::assertSame(
+            [['pageId' => $pageId, 'areaId' => 100, 'liveAreaId' => 300, 'pageClassName' => Page::class]],
+            $this->discovery->getEligiblePagesInLocale(['en_US'], true, true),
+        );
+    }
+
+    public function testALocaleWithoutARowTakesEachStageFromTheFirstLocaleInItsChainThatHasOne(): void
+    {
+        $pageId = $this->pageId();
+        $this->seeder->seedPage($pageId, 900);
+        $this->seeder->addLocalisedAreaTables('Page');
+        $this->seeder->seedLocalisedArea('Page', $pageId, 'nl_NL', 200);
+        $this->seeder->seedLocalisedArea('Page', $pageId, 'en_US', 100);
+        $this->seeder->seedLocalisedArea('Page', $pageId, 'en_US', 100, 'live');
+        $this->seeder->seedLocalisedArea('Page', $pageId, 'fr_FR', 400, 'live');
+
+        self::assertSame(
+            [[
+                'pageId' => $pageId,
+                'areaId' => 100,
+                'liveAreaId' => 400,
+                'pageClassName' => Page::class,
+                'draftFallback' => 'en_US',
+                'liveFallback' => 'fr_FR',
+            ]],
+            $this->discovery->getEligiblePagesInLocale(['de_DE', 'fr_FR', 'en_US'], false, false),
+        );
+    }
+
+    public function testAPageWithNoRowAnywhereInTheChainIsLeftOutOfANonDefaultLocale(): void
+    {
+        $pageId = $this->pageId();
+        $this->seeder->seedPage($pageId, 900);
+        $this->seeder->addLocalisedAreaTables('Page');
+        $this->seeder->seedLocalisedArea('Page', $pageId, 'en_US', 100);
+
+        self::assertSame([], $this->discovery->getEligiblePagesInLocale(['fr_FR'], false, true));
+    }
+
+    public function testTheDefaultLocaleFallsBackToTheBaseColumnOnlyWhenItHasNoRow(): void
+    {
+        $withoutRow = $this->pageId();
+        $withEmptyRow = $this->pageId('test_page_2');
+        $this->seeder->seedPage($withoutRow, 900);
+        $this->seeder->seedPage($withEmptyRow, 901);
+        $this->seeder->addLocalisedAreaTables('Page');
+        $this->seeder->seedLocalisedArea('Page', $withEmptyRow, 'en_US', 0);
+
+        self::assertSame(
+            [['pageId' => $withoutRow, 'areaId' => 900, 'liveAreaId' => 0, 'pageClassName' => Page::class]],
+            $this->discovery->getEligiblePagesInLocale(['en_US'], true, true),
+            'a row without an area is the locale\'s own (empty) answer; an unpublished page has no live area',
+        );
+    }
+
+    public function testThePerLocaleVariantHonoursUseElementalGridAndThePageFilter(): void
+    {
+        $enabled = $this->pageId();
+        $disabled = $this->pageId('test_page_2');
+        $this->seeder->seedPage($enabled, 900);
+        $this->seeder->seedPage($disabled, 901, useGrid: false);
+        $this->seeder->addLocalisedAreaTables('Page');
+        $this->seeder->seedLocalisedArea('Page', $enabled, 'nl_NL', 200);
+        $this->seeder->seedLocalisedArea('Page', $disabled, 'nl_NL', 201);
+
+        self::assertSame([$enabled], \array_column($this->discovery->getEligiblePagesInLocale(['nl_NL'], false, false), 'pageId'));
+        self::assertSame([], $this->discovery->getEligiblePagesInLocale(['nl_NL'], false, false, [999999]));
+    }
+
+    public function testATableSharingOneAreaAcrossLocalesJoinsOnlyWhenAsked(): void
+    {
+        $table = DataObject::getSchema()->tableName(TestPage::class);
+        $this->seeder->addElementalAreaColumn($table);
+
+        try {
+            $perLocale = $this->pageId();
+            $shared = (int) TestPage::create(['Title' => 'Shared area'])->write();
+            $this->seeder->seedPage($perLocale, 900);
+            $this->seeder->seedPlainElementalPageOnTable($table, $shared, 500);
+            $this->seeder->addLocalisedAreaTables('Page');
+            $this->seeder->seedLocalisedArea('Page', $perLocale, 'nl_NL', 200);
+
+            self::assertSame(
+                [$perLocale],
+                \array_column($this->discovery->getEligiblePagesInLocale(['nl_NL'], false, false), 'pageId'),
+            );
+            self::assertSame(
+                [
+                    ['pageId' => $perLocale, 'areaId' => 200, 'liveAreaId' => 0, 'pageClassName' => Page::class],
+                    ['pageId' => $shared, 'areaId' => 500, 'liveAreaId' => 500, 'pageClassName' => TestPage::class],
+                ],
+                $this->discovery->getEligiblePagesInLocale(['nl_NL'], false, true),
+            );
+        } finally {
+            $this->seeder->removeElementalAreaColumn($table);
+        }
+    }
+
+    public function testSharedAreasInALocaleAreTheAreasResolvedForThatLocale(): void
+    {
+        $first = $this->pageId();
+        $second = $this->pageId('test_page_2');
+        $this->seeder->seedPage($first, 900);
+        $this->seeder->seedPageSharingArea($second, 900);
+        $this->seeder->addLocalisedAreaTables('Page');
+        $this->seeder->seedLocalisedArea('Page', $first, 'en_US', 100);
+        $this->seeder->seedLocalisedArea('Page', $second, 'en_US', 101);
+        $this->seeder->seedLocalisedArea('Page', $first, 'nl_NL', 200);
+        $this->seeder->seedLocalisedArea('Page', $second, 'nl_NL', 200);
+
+        self::assertSame([], $this->discovery->getSharedAreasInLocale(['en_US'], true, true), 'the base column is not this locale\'s area');
+        self::assertSame([200 => [$first, $second]], $this->discovery->getSharedAreasInLocale(['nl_NL'], false, false));
+        self::assertSame(
+            [],
+            $this->discovery->getSharedAreasInLocale(['de_DE', 'en_US'], false, false),
+            'a locale borrowing each page\'s own area does not make that area shared',
+        );
     }
 }

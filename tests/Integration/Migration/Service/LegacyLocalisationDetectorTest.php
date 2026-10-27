@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace WeDevelop\Grid\Tests\Integration\Migration\Service;
 
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
 use SilverStripe\Dev\SapphireTest;
 use SilverStripe\ORM\DB;
@@ -34,6 +35,9 @@ final class LegacyLocalisationDetectorTest extends SapphireTest
 
     protected function tearDown(): void
     {
+        $this->seeder->removeLocalisedAreaTables('Page');
+        $this->seeder->removeLocalisedAreaTables('Page', '_obsolete_');
+        $this->seeder->removeElementalAreaColumn('Page');
         $this->seeder->removeFieldLocalisedTables();
         $this->seeder->removeLocaleIdColumn();
         $this->seeder->dropTables();
@@ -97,5 +101,48 @@ final class LegacyLocalisationDetectorTest extends SapphireTest
             . 'Element.LocaleID exist. This mixed Fluent configuration is unsupported.',
         );
         $this->detector->detect();
+    }
+
+    /**
+     * @return iterable<string, array{LegacyLocalisationModel}>
+     */
+    public static function elementModels(): iterable
+    {
+        yield 'shared elements' => [LegacyLocalisationModel::None];
+        yield 'field-localised elements' => [LegacyLocalisationModel::FieldLocalised];
+        yield 'isolated elements' => [LegacyLocalisationModel::Isolated];
+    }
+
+    #[DataProvider('elementModels')]
+    public function testReportsAPerLocaleAreaTableNextToTheElementModel(LegacyLocalisationModel $model): void
+    {
+        match ($model) {
+            LegacyLocalisationModel::FieldLocalised => $this->seeder->addFieldLocalisedTables(),
+            LegacyLocalisationModel::Isolated => $this->seeder->addLocaleIdColumn(),
+            LegacyLocalisationModel::None => null,
+        };
+        $this->seeder->addElementalAreaColumn('Page');
+        $this->seeder->addLocalisedAreaTables('Page');
+
+        self::assertSame($model, $this->detector->detect());
+        self::assertSame(['Page'], $this->detector->perLocaleAreaTables());
+        self::assertTrue($this->detector->hasLocalisedContent());
+    }
+
+    public function testReportsNoPerLocaleAreaTableWhenTheAreaIsSharedByEveryLocale(): void
+    {
+        $this->seeder->addElementalAreaColumn('Page');
+
+        self::assertSame([], $this->detector->perLocaleAreaTables());
+        self::assertSame([], $this->detector->setAsideAreaTables());
+    }
+
+    public function testReportsTheAreaCompanionDevBuildSetAside(): void
+    {
+        $this->seeder->addElementalAreaColumn('Page');
+        $this->seeder->addLocalisedAreaTables('Page', '_obsolete_');
+
+        self::assertSame(['Page'], $this->detector->setAsideAreaTables());
+        self::assertSame([], $this->detector->perLocaleAreaTables());
     }
 }

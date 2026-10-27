@@ -23,6 +23,8 @@ use SilverStripe\ORM\DB;
  * - Plain dnadesign/silverstripe-elemental: pages have only ElementalAreaID (no UseElementalGrid)
  *
  * When UseElementalGrid is absent, all pages with ElementalAreaID > 0 are eligible.
+ *
+ * @phpstan-import-type EligiblePage from LegacyElementSource
  */
 final class LegacyPageDiscovery
 {
@@ -46,89 +48,293 @@ final class LegacyPageDiscovery
      *
      * The columns may live on SiteTree or Page depending on how the old
      * extension was applied. We LEFT JOIN both and COALESCE to handle either.
+     * Every page table is read as one area shared by all locales, so a page's
+     * live elements come from the same area as its draft ones.
      *
      * @param list<int>|null $pageIds Optional filter to restrict to specific pages
-     * @return list<array{pageId: int, areaId: int, pageClassName: class-string}>
+     * @return list<EligiblePage>
      */
     public function getEligiblePages(string $stage, ?array $pageIds = null): array
     {
         // The old elemental extension could be applied to any SiteTree subclass
         // (Page, HomePage, BlogPage, etc.). Discover which tables have the column
         // using the class manifest, then query each.
-        $baseTables = $this->findPageTablesWithColumn('ElementalAreaID');
-
-        if ($baseTables === []) {
-            return [];
+        $pages = [];
+        foreach ($this->findPageTablesWithColumn('ElementalAreaID') as $baseTable) {
+            $pages = $this->appendUnseen($pages, $this->sharedAreaPages($baseTable, $stage, $pageIds));
         }
 
+        return $pages;
+    }
+
+    /**
+     * Eligible pages for one Fluent locale. On a page table whose area is per
+     * locale ({@see getPerLocaleAreaTables()}) each stage takes its area from
+     * the first locale in `$chain` with a `_Localised` row for the page; only
+     * the default locale falls back to the base column, and only without such
+     * a row. A page that resolves no draft area is left out. Any other page
+     * table shares one area across locales and joins only when
+     * `$withSharedAreaTables` is set.
+     *
+     * @param non-empty-list<non-empty-string> $chain The locale, then its fallbacks in order
+     * @param list<int>|null $pageIds
+     * @return list<EligiblePage>
+     */
+    public function getEligiblePagesInLocale(
+        array $chain,
+        bool $isDefault,
+        bool $withSharedAreaTables,
+        ?array $pageIds = null,
+    ): array {
+        $pages = [];
+        foreach ($this->findPageTablesWithColumn('ElementalAreaID') as $baseTable) {
+            if ($this->isPerLocaleAreaTable($baseTable)) {
+                $pages = $this->appendUnseen($pages, $this->perLocaleAreaPages($baseTable, $chain, $isDefault, $pageIds));
+            } elseif ($withSharedAreaTables) {
+                $pages = $this->appendUnseen($pages, $this->sharedAreaPages($baseTable, 'draft', $pageIds));
+            }
+        }
+
+        return $pages;
+    }
+
+    /**
+     * Page tables whose ElementalAreaID Fluent localised: `<Table>_Localised`
+     * carries the column, so each locale points at its own area.
+     *
+     * @return list<string>
+     */
+    public function getPerLocaleAreaTables(): array
+    {
+        return \array_values(\array_filter(
+            $this->findPageTablesWithColumn('ElementalAreaID'),
+            $this->isPerLocaleAreaTable(...),
+        ));
+    }
+
+    /**
+     * Page tables whose per-locale ElementalAreaID dev/build set aside: the
+     * column survives in `_obsolete_<Table>_Localised` only.
+     *
+     * @return list<string>
+     */
+    public function getSetAsideAreaTables(): array
+    {
+        return \array_values(\array_filter(
+            $this->findPageTablesWithColumn(null),
+            fn (string $table): bool => $this->tableHasColumn('_obsolete_' . $table . '_Localised', 'ElementalAreaID')
+                && !$this->isPerLocaleAreaTable($table),
+        ));
+    }
+
+    private function isPerLocaleAreaTable(string $baseTable): bool
+    {
+        return $this->tableHasColumn($baseTable . '_Localised', 'ElementalAreaID');
+    }
+
+    /**
+     * @param list<int>|null $pageIds
+     * @return list<EligiblePage>
+     */
+    private function sharedAreaPages(string $baseTable, string $stage, ?array $pageIds): array
+    {
         // ClassName always lives on the SiteTree base table. JOIN with it
         // to resolve the concrete page class for polymorphic ParentClass.
         $siteTreeTable = $this->stageTable('SiteTree', $stage);
+        $table = $this->stageTable($baseTable, $stage);
+        $isSiteTreeTable = ($table === $siteTreeTable);
+        $hasUseElementalGrid = $this->tableHasColumn($baseTable, 'UseElementalGrid');
+
+        if ($isSiteTreeTable) {
+            $sql = <<<SQL
+                SELECT "ID" AS pageId,
+                       "ElementalAreaID" AS areaId,
+                       "ClassName" AS pageClassName
+                FROM "{$table}"
+                WHERE "ElementalAreaID" > 0
+                SQL;
+
+            if ($hasUseElementalGrid) {
+                $sql .= ' AND "UseElementalGrid" = 1';
+            }
+        } else {
+            $sql = <<<SQL
+                SELECT "{$table}"."ID" AS pageId,
+                       "{$table}"."ElementalAreaID" AS areaId,
+                       "_st"."ClassName" AS pageClassName
+                FROM "{$table}"
+                INNER JOIN "{$siteTreeTable}" AS "_st" ON "_st"."ID" = "{$table}"."ID"
+                WHERE "{$table}"."ElementalAreaID" > 0
+                SQL;
+
+            if ($hasUseElementalGrid) {
+                $sql .= \sprintf(' AND "%s"."UseElementalGrid" = 1', $table);
+            }
+        }
+
+        $params = [];
+
+        if ($pageIds !== null && $pageIds !== []) {
+            $placeholders = \implode(', ', \array_fill(0, \count($pageIds), '?'));
+            $idColumn = $isSiteTreeTable ? '"ID"' : \sprintf('"%s"."ID"', $table);
+            $sql .= " AND {$idColumn} IN ({$placeholders})";
+            $params = $pageIds;
+        }
+
+        $orderColumn = $isSiteTreeTable ? '"ID"' : \sprintf('"%s"."ID"', $table);
+        $sql .= " ORDER BY {$orderColumn} ASC";
 
         $pages = [];
-        /** @var array<int, true> $seen */
-        $seen = [];
+        foreach (DB::prepared_query($sql, $params) as $row) {
+            /** @var array<string, int|string> $row */
+            $areaId = (int) $row['areaId'];
+            /** @var class-string $pageClassName */
+            $pageClassName = (string) $row['pageClassName'];
+            $pages[] = [
+                'pageId' => (int) $row['pageId'],
+                'areaId' => $areaId,
+                'liveAreaId' => $areaId,
+                'pageClassName' => $pageClassName,
+            ];
+        }
 
-        foreach ($baseTables as $baseTable) {
-            $table = $this->stageTable($baseTable, $stage);
-            $isSiteTreeTable = ($table === $siteTreeTable);
-            $hasUseElementalGrid = $this->tableHasColumn($baseTable, 'UseElementalGrid');
+        return $pages;
+    }
 
-            if ($isSiteTreeTable) {
-                $sql = <<<SQL
-                    SELECT "ID" AS pageId,
-                           "ElementalAreaID" AS areaId,
-                           "ClassName" AS pageClassName
-                    FROM "{$table}"
-                    WHERE "ElementalAreaID" > 0
-                    SQL;
+    /**
+     * Three queries per table whatever the number of pages: the draft page
+     * rows (with their base columns), then the `_Localised` rows of every
+     * locale in the chain, per stage.
+     *
+     * @param non-empty-list<non-empty-string> $chain
+     * @param list<int>|null $pageIds
+     * @return list<EligiblePage>
+     */
+    private function perLocaleAreaPages(string $baseTable, array $chain, bool $isDefault, ?array $pageIds): array
+    {
+        $conditions = [];
+        $params = [];
+        if ($this->tableHasColumn($baseTable, 'UseElementalGrid')) {
+            $conditions[] = \sprintf('"%s"."UseElementalGrid" = 1', $baseTable);
+        }
 
-                if ($hasUseElementalGrid) {
-                    $sql .= ' AND "UseElementalGrid" = 1';
-                }
-            } else {
-                $sql = <<<SQL
-                    SELECT "{$table}"."ID" AS pageId,
-                           "{$table}"."ElementalAreaID" AS areaId,
-                           "_st"."ClassName" AS pageClassName
-                    FROM "{$table}"
-                    INNER JOIN "{$siteTreeTable}" AS "_st" ON "_st"."ID" = "{$table}"."ID"
-                    WHERE "{$table}"."ElementalAreaID" > 0
-                    SQL;
+        if ($pageIds !== null && $pageIds !== []) {
+            $conditions[] = \sprintf('"%s"."ID" IN (%s)', $baseTable, \implode(', ', \array_fill(0, \count($pageIds), '?')));
+            $params = $pageIds;
+        }
 
-                if ($hasUseElementalGrid) {
-                    $sql .= \sprintf(' AND "%s"."UseElementalGrid" = 1', $table);
-                }
+        $where = $conditions === [] ? '' : 'WHERE ' . \implode(' AND ', $conditions);
+        $sql = <<<SQL
+            SELECT "{$baseTable}"."ID" AS pageId,
+                   "{$baseTable}"."ElementalAreaID" AS areaId,
+                   "_live"."ElementalAreaID" AS liveAreaId,
+                   "_st"."ClassName" AS pageClassName
+            FROM "{$baseTable}"
+            INNER JOIN "SiteTree" AS "_st" ON "_st"."ID" = "{$baseTable}"."ID"
+            LEFT JOIN "{$baseTable}_Live" AS "_live" ON "_live"."ID" = "{$baseTable}"."ID"
+            {$where}
+            ORDER BY "{$baseTable}"."ID" ASC
+            SQL;
+
+        $draftAreas = $this->localisedAreas($baseTable . '_Localised', $chain, $pageIds);
+        $liveAreas = $this->localisedAreas($baseTable . '_Localised_Live', $chain, $pageIds);
+
+        $pages = [];
+        foreach (DB::prepared_query($sql, $params) as $row) {
+            /** @var array<string, int|string|null> $row */
+            $pageId = (int) $row['pageId'];
+            $draft = $this->resolveArea($draftAreas[$pageId] ?? [], $chain, $isDefault ? (int) $row['areaId'] : 0);
+            if ($draft['areaId'] <= 0) {
+                continue;
             }
 
-            $params = [];
-
-            if ($pageIds !== null && $pageIds !== []) {
-                $placeholders = \implode(', ', \array_fill(0, \count($pageIds), '?'));
-                $idColumn = $isSiteTreeTable ? '"ID"' : \sprintf('"%s"."ID"', $table);
-                $sql .= " AND {$idColumn} IN ({$placeholders})";
-                $params = $pageIds;
+            $live = $this->resolveArea($liveAreas[$pageId] ?? [], $chain, $isDefault ? (int) $row['liveAreaId'] : 0);
+            /** @var class-string $pageClassName */
+            $pageClassName = (string) $row['pageClassName'];
+            $page = [
+                'pageId' => $pageId,
+                'areaId' => $draft['areaId'],
+                'liveAreaId' => $live['areaId'],
+                'pageClassName' => $pageClassName,
+            ];
+            if ($draft['fallback'] !== null) {
+                $page['draftFallback'] = $draft['fallback'];
             }
+            if ($live['fallback'] !== null) {
+                $page['liveFallback'] = $live['fallback'];
+            }
+            $pages[] = $page;
+        }
 
-            $orderColumn = $isSiteTreeTable ? '"ID"' : \sprintf('"%s"."ID"', $table);
-            $sql .= " ORDER BY {$orderColumn} ASC";
+        return $pages;
+    }
 
-            $result = DB::prepared_query($sql, $params);
+    /**
+     * @param non-empty-list<non-empty-string> $chain
+     * @param list<int>|null $pageIds
+     * @return array<int, array<string, int>> page ID → locale → area ID
+     */
+    private function localisedAreas(string $localisedTable, array $chain, ?array $pageIds): array
+    {
+        if (!$this->tableHasColumn($localisedTable, 'ElementalAreaID')) {
+            return [];
+        }
 
-            foreach ($result as $row) {
-                /** @var array<string, int|string> $row */
-                $id = (int) $row['pageId'];
-                if (isset($seen[$id])) {
-                    continue;
-                }
-                $seen[$id] = true;
-                /** @var class-string $pageClassName */
-                $pageClassName = (string) $row['pageClassName'];
-                $pages[] = [
-                    'pageId' => $id,
-                    'areaId' => (int) $row['areaId'],
-                    'pageClassName' => $pageClassName,
-                ];
+        $sql = \sprintf(
+            'SELECT "RecordID", "Locale", "ElementalAreaID" FROM "%s" WHERE "Locale" IN (%s)',
+            $localisedTable,
+            \implode(', ', \array_fill(0, \count($chain), '?')),
+        );
+        $params = $chain;
+        if ($pageIds !== null && $pageIds !== []) {
+            $sql .= \sprintf(' AND "RecordID" IN (%s)', \implode(', ', \array_fill(0, \count($pageIds), '?')));
+            $params = [...$params, ...$pageIds];
+        }
+
+        $areas = [];
+        foreach (DB::prepared_query($sql, $params) as $row) {
+            /** @var array{RecordID: int|string, Locale: string, ElementalAreaID: int|string|null} $row */
+            $areas[(int) $row['RecordID']][$row['Locale']] = (int) $row['ElementalAreaID'];
+        }
+
+        return $areas;
+    }
+
+    /**
+     * The area of the first locale in the chain with a row, the way Fluent
+     * picked a localised field's value; `$baseAreaId` when none has one.
+     *
+     * @param array<string, int> $areasByLocale
+     * @param non-empty-list<non-empty-string> $chain
+     * @return array{areaId: int, fallback: non-empty-string|null} `fallback` names the
+     *     locale that supplied the area when it is not the chain's own locale
+     */
+    private function resolveArea(array $areasByLocale, array $chain, int $baseAreaId): array
+    {
+        foreach ($chain as $position => $locale) {
+            if (\array_key_exists($locale, $areasByLocale)) {
+                return ['areaId' => $areasByLocale[$locale], 'fallback' => $position === 0 ? null : $locale];
+            }
+        }
+
+        return ['areaId' => $baseAreaId, 'fallback' => null];
+    }
+
+    /**
+     * A page reachable through more than one page table is taken from the
+     * first table that yields it.
+     *
+     * @param list<EligiblePage> $pages
+     * @param list<EligiblePage> $found
+     * @return list<EligiblePage>
+     */
+    private function appendUnseen(array $pages, array $found): array
+    {
+        $seen = \array_flip(\array_column($pages, 'pageId'));
+        foreach ($found as $page) {
+            if (!isset($seen[$page['pageId']])) {
+                $seen[$page['pageId']] = true;
+                $pages[] = $page;
             }
         }
 
@@ -146,8 +352,30 @@ final class LegacyPageDiscovery
      */
     public function getSharedAreas(): array
     {
+        return $this->sharedAreasOf($this->getEligiblePages('draft'));
+    }
+
+    /**
+     * {@see getSharedAreas()} for the areas {@see getEligiblePagesInLocale()}
+     * resolves: a locale borrowing a page's area from its fallback does not
+     * share it, as the page is still its only user in this locale.
+     *
+     * @param non-empty-list<non-empty-string> $chain
+     * @return array<int, list<int>> area ID → page IDs, ascending
+     */
+    public function getSharedAreasInLocale(array $chain, bool $isDefault, bool $withSharedAreaTables): array
+    {
+        return $this->sharedAreasOf($this->getEligiblePagesInLocale($chain, $isDefault, $withSharedAreaTables));
+    }
+
+    /**
+     * @param list<EligiblePage> $pages
+     * @return array<int, list<int>> area ID → page IDs, ascending
+     */
+    private function sharedAreasOf(array $pages): array
+    {
         $pagesByArea = [];
-        foreach ($this->getEligiblePages('draft') as $page) {
+        foreach ($pages as $page) {
             $pagesByArea[$page['areaId']][] = $page['pageId'];
         }
 
@@ -218,14 +446,7 @@ final class LegacyPageDiscovery
      */
     private function tableHasColumn(string $table, string $column): bool
     {
-        if ($this->tableListCache === null) {
-            /** @var array<string, mixed> $tableList */
-            $tableList = DB::table_list();
-            $this->tableListCache = $tableList;
-        }
-
-        // table_list() returns lowercase table names as keys
-        if (!\array_key_exists(\strtolower($table), $this->tableListCache)) {
+        if (!$this->tableExists($table)) {
             return false;
         }
 
@@ -238,15 +459,28 @@ final class LegacyPageDiscovery
         return \array_key_exists($column, $this->fieldListCache[$table]);
     }
 
+    private function tableExists(string $table): bool
+    {
+        if ($this->tableListCache === null) {
+            /** @var array<string, mixed> $tableList */
+            $tableList = DB::table_list();
+            $this->tableListCache = $tableList;
+        }
+
+        // table_list() returns lowercase table names as keys
+        return \array_key_exists(\strtolower($table), $this->tableListCache);
+    }
+
     /**
-     * Find page tables that have a given column.
+     * Find page tables that have a given column, or every existing page table
+     * when `$column` is null.
      *
      * Uses the class manifest to discover all SiteTree subclass table names,
      * then checks each for the column. Only scans page tables, not the entire database.
      *
      * @return list<string> Base table names (without stage suffix)
      */
-    private function findPageTablesWithColumn(string $column): array
+    private function findPageTablesWithColumn(?string $column): array
     {
         $schema = DataObject::getSchema();
         $result = [];
@@ -259,7 +493,7 @@ final class LegacyPageDiscovery
             }
             $checked[$table] = true;
 
-            if ($this->tableHasColumn($table, $column)) {
+            if ($column === null ? $this->tableExists($table) : $this->tableHasColumn($table, $column)) {
                 $result[] = $table;
             }
         }

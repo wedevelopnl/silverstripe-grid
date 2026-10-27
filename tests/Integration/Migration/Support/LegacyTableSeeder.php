@@ -476,6 +476,55 @@ final class LegacyTableSeeder
         }
     }
 
+    /**
+     * Create `<table>_Localised` and `<table>_Localised_Live` carrying a
+     * per-locale ElementalAreaID, the way Fluent stored a localised area
+     * relation on a page table. Pass a `_obsolete_` prefix to simulate the
+     * companion dev/build set aside.
+     */
+    public function addLocalisedAreaTables(string $table, string $prefix = '', bool $withLive = true): void
+    {
+        $this->assertNoOpenTransaction('addLocalisedAreaTables');
+        $targets = [$prefix . $table . '_Localised'];
+        if ($withLive) {
+            $targets[] = $prefix . $table . '_Localised_Live';
+        }
+
+        foreach ($targets as $target) {
+            DB::query(<<<SQL
+                CREATE TABLE IF NOT EXISTS "{$target}" (
+                    "ID" int NOT NULL PRIMARY KEY AUTO_INCREMENT,
+                    "RecordID" int NOT NULL DEFAULT 0,
+                    "Locale" varchar(10) NOT NULL DEFAULT '',
+                    "Title" varchar(255) DEFAULT NULL,
+                    "ElementalAreaID" int NOT NULL DEFAULT 0
+                )
+                SQL);
+        }
+    }
+
+    public function removeLocalisedAreaTables(string $table, string $prefix = ''): void
+    {
+        $this->assertNoOpenTransaction('removeLocalisedAreaTables');
+        foreach ([$prefix . $table . '_Localised', $prefix . $table . '_Localised_Live'] as $target) {
+            DB::query("DROP TABLE IF EXISTS \"{$target}\"");
+        }
+    }
+
+    /**
+     * Point a page at its own area in one locale. Creates the ElementalArea
+     * row too, unless another locale or stage already did.
+     */
+    public function seedLocalisedArea(string $table, int $pageId, string $locale, int $areaId, string $stage = 'draft'): void
+    {
+        $this->seedLocalised($table . '_Localised', $pageId, $locale, ['ElementalAreaID' => $areaId], $stage);
+
+        DB::prepared_query(
+            'INSERT IGNORE INTO "ElementalArea" ("ID", "OwnerClassName") VALUES (?, ?)',
+            [$areaId, 'SilverStripe\\CMS\\Model\\SiteTree'],
+        );
+    }
+
     public function addLocaleIdColumn(): void
     {
         $this->assertNoOpenTransaction('addLocaleIdColumn');
