@@ -13,6 +13,7 @@ use WeDevelop\Grid\Migration\Service\FieldMapper;
 use WeDevelop\Grid\Migration\Service\FluentMigrationOrchestrator;
 use WeDevelop\Grid\Migration\Service\LegacyDataReader;
 use WeDevelop\Grid\Migration\Service\LegacyLocalisationDetector;
+use WeDevelop\Grid\Migration\Service\LegacyTables;
 use WeDevelop\Grid\Migration\Strategy\RowMappingStrategy;
 
 /**
@@ -40,10 +41,18 @@ class MigrateGridWithFluentTask extends AbstractMigrationTask
         // config; without this, that throw would only fire later inside the
         // orchestrator (after the operator confirmed) and escape run() as a
         // raw stack trace instead of a clean Command::FAILURE.
+        $detector = new LegacyLocalisationDetector();
         try {
-            (new LegacyLocalisationDetector())->detect();
+            $detector->detect();
         } catch (RuntimeException $exception) {
             return $exception->getMessage();
+        }
+
+        // Without the per-locale ElementalAreaID every locale would silently
+        // read the base column: one locale's blocks, copied nowhere else.
+        $setAside = $detector->setAsideAreaTables();
+        if ($setAside !== []) {
+            return \implode(' ', \array_map($this->setAsideAreaError(...), $setAside));
         }
 
         // Require a resolvable default locale. Fluent's Locale::getDefault()
@@ -61,6 +70,21 @@ class MigrateGridWithFluentTask extends AbstractMigrationTask
         }
 
         return null;
+    }
+
+    private function setAsideAreaError(string $table): string
+    {
+        $live = LegacyTables::exists('_obsolete_' . $table . '_Localised_Live')
+            ? \sprintf(' (and "_obsolete_%1$s_Localised_Live" to "%1$s_Localised_Live")', $table)
+            : '';
+
+        return \sprintf(
+            'Page table "%1$s": legacy table "_obsolete_%1$s_Localised" holds the per-locale ElementalAreaID '
+            . 'that "%1$s_Localised" lacks (set aside by dev/build). Rename it back to "%1$s_Localised"%2$s '
+            . 'before migrating; nothing was changed.',
+            $table,
+            $live,
+        );
     }
 
     protected function performMigration(
