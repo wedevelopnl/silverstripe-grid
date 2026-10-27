@@ -76,9 +76,9 @@ final readonly class LegacyLocalisationDetector
 
     /**
      * Page tables whose per-locale ElementalAreaID dev/build moved to
-     * `_obsolete_<Table>_Localised`.
+     * `_obsolete_<Table>_Localised` and/or `_obsolete_<Table>_Localised_Live`.
      *
-     * @return list<string>
+     * @return array<string, non-empty-list<string>> page table → companions still set aside
      */
     public function setAsideAreaTables(): array
     {

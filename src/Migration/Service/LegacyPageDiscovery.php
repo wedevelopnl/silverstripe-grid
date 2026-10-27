@@ -114,18 +114,27 @@ final class LegacyPageDiscovery
     }
 
     /**
-     * Page tables whose per-locale ElementalAreaID dev/build set aside: the
-     * column survives in `_obsolete_<Table>_Localised` only.
+     * Page tables whose per-locale ElementalAreaID dev/build set aside, each
+     * with the companions (`<Table>_Localised`, `<Table>_Localised_Live`) that
+     * lack the column while their `_obsolete_` copy carries it.
      *
-     * @return list<string>
+     * @return array<string, non-empty-list<string>> page table → companions still set aside
      */
     public function getSetAsideAreaTables(): array
     {
-        return \array_values(\array_filter(
-            $this->findPageTablesWithColumn(null),
-            fn (string $table): bool => $this->tableHasColumn('_obsolete_' . $table . '_Localised', 'ElementalAreaID')
-                && !$this->isPerLocaleAreaTable($table),
-        ));
+        $setAside = [];
+        foreach ($this->findPageTablesWithColumn(null) as $table) {
+            $companions = \array_values(\array_filter(
+                [$table . '_Localised', $table . '_Localised_Live'],
+                fn (string $companion): bool => $this->tableHasColumn('_obsolete_' . $companion, 'ElementalAreaID')
+                    && !$this->tableHasColumn($companion, 'ElementalAreaID'),
+            ));
+            if ($companions !== []) {
+                $setAside[$table] = $companions;
+            }
+        }
+
+        return $setAside;
     }
 
     private function isPerLocaleAreaTable(string $baseTable): bool

@@ -142,7 +142,7 @@ final class LegacyLocalisationDetectorTest extends SapphireTest
         $this->seeder->addElementalAreaColumn('Page');
         $this->seeder->addLocalisedAreaTables('Page', '_obsolete_');
 
-        self::assertSame(['Page'], $this->detector->setAsideAreaTables());
+        self::assertSame(['Page' => ['Page_Localised', 'Page_Localised_Live']], $this->detector->setAsideAreaTables());
         self::assertSame([], $this->detector->perLocaleAreaTables());
     }
 }
