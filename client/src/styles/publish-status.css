@@ -39,12 +39,12 @@
    quietly. The frame's DASHED border is what says "this content is shared";
    only the colour carries publish state, exactly as on every other card. */
 .ssgrid-editor
-:is(
-  [data-status='draft'],
-  [data-status='notPublished'],
-  [data-status='modified'],
-  [data-descendant-unpublished]
-) {
+  :is(
+    [data-status='draft'],
+    [data-status='notPublished'],
+    [data-status='modified'],
+    [data-descendant-unpublished]
+  ) {
   border-color: var(--ssgrid-border-unpublished);
 }
 
