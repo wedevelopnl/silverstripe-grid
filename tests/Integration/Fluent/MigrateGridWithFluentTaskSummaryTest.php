@@ -78,9 +78,9 @@ final class MigrateGridWithFluentTaskSummaryTest extends FluentMigrationTestCase
 
         self::assertSame(Command::FAILURE, $result['exitCode']);
         self::assertSame(
-            'Page table "Page": legacy table "_obsolete_Page_Localised" holds the per-locale ElementalAreaID '
-            . 'that "Page_Localised" lacks (set aside by dev/build). Rename it back to "Page_Localised" '
-            . '(and "_obsolete_Page_Localised_Live" to "Page_Localised_Live") before migrating; nothing was changed.'
+            'Page table "Page": dev/build set aside its per-locale ElementalAreaID. Rename '
+            . '"_obsolete_Page_Localised" back to "Page_Localised" and '
+            . '"_obsolete_Page_Localised_Live" back to "Page_Localised_Live" before migrating; nothing was changed.'
             . "\n",
             $result['output'],
         );
@@ -94,6 +94,26 @@ final class MigrateGridWithFluentTaskSummaryTest extends FluentMigrationTestCase
         self::assertSame(Command::FAILURE, $written['exitCode']);
         $table = DataObject::getSchema()->baseDataTable(GridElement::class);
         self::assertSame(0, (int) DB::query("SELECT COUNT(*) FROM \"{$table}\"")->value(), 'no page on the site is changed');
+    }
+
+    public function testRefusesWhileTheLiveCompanionIsStillSetAside(): void
+    {
+        $this->seeder->addLocalisedAreaTables('Page', withLive: false);
+        $this->seeder->addLocalisedAreaTables('Page', '_obsolete_');
+
+        $result = TaskRunner::run(new MigrateGridWithFluentTask(), [
+            '--default-viewport' => self::DEFAULT_VIEWPORT,
+            '--zone' => self::ZONE,
+            '--dry-run' => true,
+        ]);
+
+        self::assertSame(Command::FAILURE, $result['exitCode']);
+        self::assertSame(
+            'Page table "Page": dev/build set aside its per-locale ElementalAreaID. Rename '
+            . '"_obsolete_Page_Localised_Live" back to "Page_Localised_Live" before migrating; nothing was changed.'
+            . "\n",
+            $result['output'],
+        );
     }
 
     public function testPrintsOneSummaryLinePerLocalePass(): void

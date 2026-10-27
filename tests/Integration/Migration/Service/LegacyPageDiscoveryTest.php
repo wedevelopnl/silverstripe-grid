@@ -244,12 +244,20 @@ final class LegacyPageDiscoveryTest extends MigrationTestCase
         self::assertSame([], $this->discovery->getPerLocaleAreaTables());
     }
 
-    public function testSetAsideAreaTablesNameTheTableWhoseAreaCompanionDevBuildRenamed(): void
+    public function testSetAsideAreaTablesNameTheTableWhoseAreaCompanionsDevBuildRenamed(): void
     {
         $this->seeder->addLocalisedAreaTables('Page', '_obsolete_');
 
-        self::assertSame(['Page'], $this->discovery->getSetAsideAreaTables());
+        self::assertSame(['Page' => ['Page_Localised', 'Page_Localised_Live']], $this->discovery->getSetAsideAreaTables());
         self::assertSame([], $this->discovery->getPerLocaleAreaTables());
+    }
+
+    public function testALiveCompanionStillSetAsideIsReportedOnceTheDraftOneIsBack(): void
+    {
+        $this->seeder->addLocalisedAreaTables('Page', withLive: false);
+        $this->seeder->addLocalisedAreaTables('Page', '_obsolete_');
+
+        self::assertSame(['Page' => ['Page_Localised_Live']], $this->discovery->getSetAsideAreaTables());
     }
 
     public function testASetAsideCompanionIsHarmlessOnceTheTableCarriesTheAreaAgain(): void

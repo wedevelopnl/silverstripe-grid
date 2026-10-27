@@ -13,7 +13,6 @@ use WeDevelop\Grid\Migration\Service\FieldMapper;
 use WeDevelop\Grid\Migration\Service\FluentMigrationOrchestrator;
 use WeDevelop\Grid\Migration\Service\LegacyDataReader;
 use WeDevelop\Grid\Migration\Service\LegacyLocalisationDetector;
-use WeDevelop\Grid\Migration\Service\LegacyTables;
 use WeDevelop\Grid\Migration\Strategy\RowMappingStrategy;
 
 /**
@@ -52,7 +51,7 @@ class MigrateGridWithFluentTask extends AbstractMigrationTask
         // read the base column: one locale's blocks, copied nowhere else.
         $setAside = $detector->setAsideAreaTables();
         if ($setAside !== []) {
-            return \implode(' ', \array_map($this->setAsideAreaError(...), $setAside));
+            return \implode(' ', \array_map($this->setAsideAreaError(...), \array_keys($setAside), $setAside));
         }
 
         // Require a resolvable default locale. Fluent's Locale::getDefault()
@@ -72,18 +71,20 @@ class MigrateGridWithFluentTask extends AbstractMigrationTask
         return null;
     }
 
-    private function setAsideAreaError(string $table): string
+    /**
+     * @param non-empty-list<string> $companions
+     */
+    private function setAsideAreaError(string $table, array $companions): string
     {
-        $live = LegacyTables::exists('_obsolete_' . $table . '_Localised_Live')
-            ? \sprintf(' (and "_obsolete_%1$s_Localised_Live" to "%1$s_Localised_Live")', $table)
-            : '';
+        $renames = \array_map(
+            static fn (string $companion): string => \sprintf('"_obsolete_%1$s" back to "%1$s"', $companion),
+            $companions,
+        );
 
         return \sprintf(
-            'Page table "%1$s": legacy table "_obsolete_%1$s_Localised" holds the per-locale ElementalAreaID '
-            . 'that "%1$s_Localised" lacks (set aside by dev/build). Rename it back to "%1$s_Localised"%2$s '
-            . 'before migrating; nothing was changed.',
+            'Page table "%s": dev/build set aside its per-locale ElementalAreaID. Rename %s before migrating; nothing was changed.',
             $table,
-            $live,
+            \implode(' and ', $renames),
         );
     }
 
