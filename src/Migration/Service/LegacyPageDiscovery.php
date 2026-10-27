@@ -123,7 +123,7 @@ final class LegacyPageDiscovery
     public function getSetAsideAreaTables(): array
     {
         $setAside = [];
-        foreach ($this->findPageTablesWithColumn(null) as $table) {
+        foreach ($this->findPageTables() as $table) {
             $companions = \array_values(\array_filter(
                 [$table . '_Localised', $table . '_Localised_Live'],
                 fn (string $companion): bool => $this->tableHasColumn('_obsolete_' . $companion, 'ElementalAreaID')
@@ -498,33 +498,37 @@ final class LegacyPageDiscovery
     }
 
     /**
-     * Find page tables that have a given column, or every existing page table
-     * when `$column` is null.
-     *
-     * Uses the class manifest to discover all SiteTree subclass table names,
-     * then checks each for the column. Only scans page tables, not the entire database.
+     * Find page tables that have a given column.
      *
      * @return list<string> Base table names (without stage suffix)
      */
-    private function findPageTablesWithColumn(?string $column): array
+    private function findPageTablesWithColumn(string $column): array
+    {
+        return \array_values(\array_filter(
+            $this->findPageTables(),
+            fn (string $table): bool => $this->tableHasColumn($table, $column),
+        ));
+    }
+
+    /**
+     * Every existing page table, discovered through the class manifest's
+     * SiteTree subclasses. Only scans page tables, not the entire database.
+     *
+     * @return list<string> Base table names (without stage suffix)
+     */
+    private function findPageTables(): array
     {
         $schema = DataObject::getSchema();
-        $result = [];
-        $checked = [];
+        $tables = [];
 
         foreach (ClassInfo::subclassesFor(SiteTree::class, true) as $class) {
             $table = $schema->tableName($class);
-            if ($table === null || isset($checked[$table])) {
-                continue;
-            }
-            $checked[$table] = true;
-
-            if ($column === null ? $this->tableExists($table) : $this->tableHasColumn($table, $column)) {
-                $result[] = $table;
+            if ($table !== null && !isset($tables[$table]) && $this->tableExists($table)) {
+                $tables[$table] = true;
             }
         }
 
-        return $result;
+        return \array_keys($tables);
     }
 
     /**
