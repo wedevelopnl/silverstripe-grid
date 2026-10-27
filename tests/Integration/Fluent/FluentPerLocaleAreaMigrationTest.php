@@ -6,9 +6,10 @@ namespace WeDevelop\Grid\Tests\Integration\Fluent;
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
-use Psr\Log\NullLogger;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\Versioned\Versioned;
+use TractorCow\Fluent\Model\FallbackLocale;
+use TractorCow\Fluent\Model\Locale;
 use TractorCow\Fluent\State\FluentState;
 use WeDevelop\Grid\Migration\DTO\MigrationSummary;
 use WeDevelop\Grid\Migration\Service\FluentMigrationOrchestrator;
@@ -118,6 +119,30 @@ final class FluentPerLocaleAreaMigrationTest extends FluentMigrationTestCase
         self::assertSame(['Welcome'], $this->contentTitlesInLocale('de_DE'), 'the copy is not linked to its source');
     }
 
+    public function testALocaleWithSeveralFallbacksTakesTheFirstBySortThatHasAnArea(): void
+    {
+        $pageId = $this->pageId();
+        $this->seedOwnAreas($pageId);
+        // de_DE's fixture fallback (en_US) moves last; fr_FR, without an area,
+        // comes first and nl_NL second. Created after en_US, so a chain in ID
+        // order would still pick en_US.
+        $this->objFromFixture(FallbackLocale::class, 'de_falls_back_to_en')->update(['Sort' => 3])->write();
+        $german = $this->objFromFixture(Locale::class, 'de');
+        foreach (['fr' => 1, 'nl' => 2] as $fallback => $sort) {
+            FallbackLocale::create([
+                'ParentID' => $german->ID,
+                'LocaleID' => $this->idFromFixture(Locale::class, $fallback),
+                'Sort' => $sort,
+            ])->write();
+        }
+        Locale::clearCached();
+
+        self::assertSame(0, $this->runMigration($pageId));
+
+        self::assertSame(['Welkom'], $this->contentTitlesInLocale('de_DE'));
+        self::assertSame(['Welkom'], $this->liveContentTitlesInLocale('de_DE'));
+    }
+
     public function testALocaleWithNoAreaAnywhereInItsChainGetsNoGrid(): void
     {
         $pageId = $this->pageId();
@@ -172,8 +197,7 @@ final class FluentPerLocaleAreaMigrationTest extends FluentMigrationTestCase
         $pageId = $this->pageId();
         $this->seedOwnAreas($pageId);
 
-        $summaries = $this->makeOrchestrator(new NullLogger())
-            ->run(self::DEFAULT_VIEWPORT, self::ZONE, self::VIEWPORT_KEY_MAP, true, [$pageId]);
+        $summaries = $this->runOrchestrator([$pageId], dryRun: true);
 
         self::assertSame(
             ['en_US' => [1, 1], 'de_DE' => [1, 1], 'fr_FR' => [0, 0], 'nl_NL' => [1, 1]],
@@ -188,7 +212,7 @@ final class FluentPerLocaleAreaMigrationTest extends FluentMigrationTestCase
         $this->seedOwnAreas($pageId);
         $logger = new RecordingLogger();
 
-        $this->makeOrchestrator($logger)->run(self::DEFAULT_VIEWPORT, self::ZONE, self::VIEWPORT_KEY_MAP, false, [$pageId]);
+        $this->runOrchestrator([$pageId], logger: $logger);
 
         $borrowed = \array_values(\array_filter(
             $logger->messages,
@@ -246,7 +270,7 @@ final class FluentPerLocaleAreaMigrationTest extends FluentMigrationTestCase
             $this->seeder->seedElement(7500, 500, self::CONTENT_CLASS, 1, ['Title' => 'Shared']);
             $this->seeder->seedContentMedia(7500);
 
-            $this->makeOrchestrator()->run(self::DEFAULT_VIEWPORT, self::ZONE, self::VIEWPORT_KEY_MAP, false, [$perLocale, $shared]);
+            $this->runOrchestrator([$perLocale, $shared]);
 
             self::assertSame($expectedSharedSections, $this->sectionCountsPerLocale($shared));
             self::assertSame(['en_US' => 1, 'nl_NL' => 1, 'de_DE' => 1, 'fr_FR' => 0], $this->sectionCountsPerLocale($perLocale));

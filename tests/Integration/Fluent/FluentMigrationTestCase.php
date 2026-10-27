@@ -93,9 +93,18 @@ abstract class FluentMigrationTestCase extends SapphireTest
      */
     protected function runMigration(int $pageId): int
     {
-        $summaries = $this->makeOrchestrator()->run(self::DEFAULT_VIEWPORT, self::ZONE, self::VIEWPORT_KEY_MAP, false, [$pageId]);
+        $summaries = $this->runOrchestrator([$pageId]);
 
         return \array_sum(\array_map(static fn (MigrationSummary $summary): int => $summary->pagesFailed, $summaries));
+    }
+
+    /**
+     * @param list<int> $pageIds
+     * @return array<non-empty-string, MigrationSummary> locale → what its pass migrated
+     */
+    protected function runOrchestrator(array $pageIds, bool $dryRun = false, LoggerInterface $logger = new NullLogger()): array
+    {
+        return $this->makeOrchestrator($logger)->run(self::DEFAULT_VIEWPORT, self::ZONE, self::VIEWPORT_KEY_MAP, $dryRun, $pageIds);
     }
 
     protected function makeOrchestrator(LoggerInterface $logger = new NullLogger()): FluentMigrationOrchestrator
