@@ -18,11 +18,11 @@ use WeDevelop\Grid\Migration\Value\LegacyLocalisationModel;
  * are uninstalled at migration time because this module conflicts with
  * dnadesign/silverstripe-elemental).
  */
-final class LegacyLocalisationDetector
+final readonly class LegacyLocalisationDetector
 {
     private const string LOCALISED_TABLE = LegacyElementReader::ELEMENT_TABLE . '_Localised';
 
-    private readonly LegacyPageDiscovery $discovery;
+    private LegacyPageDiscovery $discovery;
 
     public function __construct()
     {
