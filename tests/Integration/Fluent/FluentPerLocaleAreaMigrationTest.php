@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace WeDevelop\Grid\Tests\Integration\Fluent;
 
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Psr\Log\NullLogger;
+use SilverStripe\ORM\DataObject;
 use SilverStripe\Versioned\Versioned;
 use TractorCow\Fluent\State\FluentState;
 use WeDevelop\Grid\Migration\DTO\MigrationSummary;
@@ -13,6 +15,7 @@ use WeDevelop\Grid\Migration\Service\FluentMigrationOrchestrator;
 use WeDevelop\Grid\Migration\Service\LocaleScopedLegacySource;
 use WeDevelop\Grid\Model\Column;
 use WeDevelop\Grid\Model\ContentElement;
+use WeDevelop\Grid\Tests\Integration\Migration\Service\TestPage;
 use WeDevelop\Grid\Tests\Integration\Support\RecordingLogger;
 
 /**
@@ -27,6 +30,9 @@ use WeDevelop\Grid\Tests\Integration\Support\RecordingLogger;
 final class FluentPerLocaleAreaMigrationTest extends FluentMigrationTestCase
 {
     protected static $fixture_file = __DIR__ . '/Fixture/migration-locales-fallback.yml';
+
+    /** @var list<class-string> */
+    protected static $extra_dataobjects = [TestPage::class];
 
     private const int EN_AREA = 100;
     private const int NL_AREA = 200;
@@ -213,5 +219,56 @@ final class FluentPerLocaleAreaMigrationTest extends FluentMigrationTestCase
         self::assertSame(['Willkommen'], $this->contentTitlesInLocale('de_DE'));
         self::assertSame([], $this->liveContentTitlesInLocale('de_DE'));
         self::assertSame(['Welcome'], $this->liveContentTitlesInLocale('en_US'));
+    }
+
+    /**
+     * @return iterable<string, array{bool, array<string, int>}>
+     */
+    public static function sharedAreaPlans(): iterable
+    {
+        yield 'shared elements: default locale only' => [false, ['en_US' => 1, 'nl_NL' => 0, 'de_DE' => 0, 'fr_FR' => 0]];
+        yield 'field-localised elements: every locale' => [true, ['en_US' => 1, 'nl_NL' => 1, 'de_DE' => 1, 'fr_FR' => 1]];
+    }
+
+    /**
+     * @param array<string, int> $expectedSharedSections
+     */
+    #[DataProvider('sharedAreaPlans')]
+    public function testAPageTableSharingOneAreaNextToAPerLocaleOneFollowsTheElementModel(
+        bool $localisedElements,
+        array $expectedSharedSections,
+    ): void {
+        $table = DataObject::getSchema()->tableName(TestPage::class);
+        $this->seeder->addElementalAreaColumn($table);
+        if ($localisedElements) {
+            $this->seeder->addFieldLocalisedTables();
+        }
+
+        try {
+            $perLocale = $this->pageId();
+            $shared = (int) TestPage::create(['Title' => 'Shared area'])->write();
+            $this->seedOwnAreas($perLocale);
+            $this->seeder->seedPlainElementalPageOnTable($table, $shared, 500);
+            $this->seeder->seedElement(7500, 500, self::CONTENT_CLASS, 1, ['Title' => 'Shared']);
+            $this->seeder->seedContentMedia(7500);
+
+            $this->makeOrchestrator()->run(self::DEFAULT_VIEWPORT, self::ZONE, self::VIEWPORT_KEY_MAP, false, [$perLocale, $shared]);
+
+            self::assertSame($expectedSharedSections, $this->sectionCountsPerLocale($shared));
+            self::assertSame(['en_US' => 1, 'nl_NL' => 1, 'de_DE' => 1, 'fr_FR' => 0], $this->sectionCountsPerLocale($perLocale));
+        } finally {
+            $this->seeder->removeElementalAreaColumn($table);
+        }
+    }
+
+    /** @return array<string, int> */
+    private function sectionCountsPerLocale(int $pageId): array
+    {
+        $counts = [];
+        foreach (['en_US', 'nl_NL', 'de_DE', 'fr_FR'] as $locale) {
+            $counts[$locale] = $this->sectionCountInLocale($pageId, $locale);
+        }
+
+        return $counts;
     }
 }
