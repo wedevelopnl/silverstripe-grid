@@ -129,6 +129,31 @@ describe('ElementTypePicker', () => {
     expect(onSelect).toHaveBeenCalledExactlyOnceWith('App\\ImageBlock')
   })
 
+  it('moves the keyboard cursor up on ArrowUp after ArrowDown stopped at the last match', async () => {
+    const user = userEvent.setup()
+    const onSelect = vi.fn()
+
+    render(<ElementTypePicker {...defaultProps} onSelect={onSelect} />)
+
+    await user.type(
+      screen.getByTestId('element-type-picker-search'),
+      '{ArrowDown}{ArrowDown}{ArrowDown}{ArrowUp}{Enter}',
+    )
+
+    expect(onSelect).toHaveBeenCalledExactlyOnceWith('App\\ImageBlock')
+  })
+
+  it('keeps the keyboard cursor on the first match on ArrowUp', async () => {
+    const user = userEvent.setup()
+    const onSelect = vi.fn()
+
+    render(<ElementTypePicker {...defaultProps} onSelect={onSelect} />)
+
+    await user.type(screen.getByTestId('element-type-picker-search'), '{ArrowUp}{Enter}')
+
+    expect(onSelect).toHaveBeenCalledExactlyOnceWith('App\\QuoteBlock')
+  })
+
   it('moves the keyboard cursor back to the first match when the search changes', async () => {
     const user = userEvent.setup()
     const onSelect = vi.fn()
@@ -193,7 +218,11 @@ describe('ElementTypePicker', () => {
 
     const icons = screen.getAllByTestId('element-type-icon')
 
-    expect(icons[1]).toHaveClass('font-icon-block-media')
+    expect(icons.map((icon) => icon.className)).toEqual([
+      'ssgrid-type-icon-chip font-icon-block-content',
+      'ssgrid-type-icon-chip font-icon-block-media',
+      'ssgrid-type-icon-chip font-icon-block-content',
+    ])
   })
 
   it('hands off to the shared block chooser from the footer', async () => {
