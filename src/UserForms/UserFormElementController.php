@@ -78,7 +78,7 @@ class UserFormElementController extends Controller
 
     public function receivedMessageFor(UserFormElement $element): ?DBHTMLText
     {
-        return (int) $element->ID === (int) $this->element->ID ? $this->receivedMessage : null;
+        return $element->ID === $this->element->ID ? $this->receivedMessage : null;
     }
 
     #[Override]

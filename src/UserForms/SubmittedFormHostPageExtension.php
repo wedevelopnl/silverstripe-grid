@@ -44,7 +44,7 @@ class SubmittedFormHostPageExtension extends Extension
         $page = Director::get_current_page();
 
         if ($page instanceof SiteTree) {
-            $submission->HostPageID = (int) $page->ID;
+            $submission->HostPageID = $page->ID;
         }
     }
 
