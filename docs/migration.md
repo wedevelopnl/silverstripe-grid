@@ -619,7 +619,7 @@ on live for every element that is on the live page, live-only elements included.
 | Property | Value |
 |----------|-------|
 | `stage` | `MigratedElementContext::DRAFT` or `MigratedElementContext::LIVE`: the stage just written |
-| `pageId`, `legacyAreaId` | The page being migrated and the legacy `ElementalArea` it reads |
+| `pageId`, `legacyAreaId` | The page being migrated and the legacy `ElementalArea` the element was read from. On a site with a separate area per locale and stage, that is the live area for an element read from the live page — a live-only element reports it on both stages |
 | `locale` | The Fluent locale pass, `null` outside `migrate-grid-with-fluent` |
 | `sharedWithPageIds` | The other pages that use the same legacy area; empty when it is not shared |
 | `firstCopy` | `null` when this element is the first written for `$legacy`. Otherwise the element an earlier page (shared area) or locale pass wrote for it, in this run or an earlier one — the one that took the items |

@@ -120,15 +120,23 @@ final class GridMigrationService
             foreach ($eligiblePages as $pageInfo) {
                 $pageId = $pageInfo['pageId'];
                 $areaId = $pageInfo['areaId'];
-                $afterMigrate = new AfterMigrateHook(
+                $hookFor = fn (int $legacyAreaId): AfterMigrateHook => new AfterMigrateHook(
                     $pageId,
-                    $areaId,
+                    $legacyAreaId,
                     $this->locale,
-                    \array_values(\array_diff($sharedAreas[$areaId] ?? [], [$pageId])),
+                    \array_values(\array_diff($sharedAreas[$legacyAreaId] ?? [], [$pageId])),
                 );
 
                 try {
-                    $pageBlocks = $this->migratePage($pageInfo, $zone, $dryRun, $defaultViewport, $viewportKeyMap, $afterMigrate);
+                    $pageBlocks = $this->migratePage(
+                        $pageInfo,
+                        $zone,
+                        $dryRun,
+                        $defaultViewport,
+                        $viewportKeyMap,
+                        $hookFor($areaId),
+                        $hookFor($pageInfo['liveAreaId']),
+                    );
                     if ($pageBlocks === null) {
                         ++$skipped;
                     } else {
@@ -187,6 +195,8 @@ final class GridMigrationService
      * @param EligiblePage $page Draft elements come from its `areaId`, live ones from its `liveAreaId`
      * @param string $defaultViewport Old viewport key used as default (e.g. 'MD'), for live grid-settings reconciliation
      * @param array<string, string> $viewportKeyMap Old viewport key → new key, for live grid-settings reconciliation
+     * @param AfterMigrateHook $afterDraftRead Fires for elements read from the draft area
+     * @param AfterMigrateHook $afterLiveRead Fires for elements read from the live area, on either stage they are written to
      * @return int<0, max>|null Content blocks migrated, or null when the page was already migrated
      */
     private function migratePage(
@@ -195,7 +205,8 @@ final class GridMigrationService
         bool $dryRun,
         string $defaultViewport,
         array $viewportKeyMap,
-        AfterMigrateHook $afterMigrate,
+        AfterMigrateHook $afterDraftRead,
+        AfterMigrateHook $afterLiveRead,
     ): ?int {
         $pageId = $page['pageId'];
         $pageClassName = $page['pageClassName'];
@@ -260,7 +271,7 @@ final class GridMigrationService
             // publish stage (previously four shared by-ref arrays).
             $idMap = new MigrationIdMap();
 
-            $this->writeDraftStage($pageId, $pageClassName, $zone, $sections, $idMap, $afterMigrate);
+            $this->writeDraftStage($pageId, $pageClassName, $zone, $sections, $idMap, $afterDraftRead);
 
             if ($liveElements !== []) {
                 $this->publishLiveStage(
@@ -272,7 +283,7 @@ final class GridMigrationService
                     $idMap,
                     $defaultViewport,
                     $viewportKeyMap,
-                    $afterMigrate,
+                    $afterLiveRead,
                 );
             }
 

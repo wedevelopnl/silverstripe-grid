@@ -459,4 +459,19 @@ final class LegacyPageDiscoveryTest extends MigrationTestCase
             'a locale borrowing each page\'s own area does not make that area shared',
         );
     }
+
+    public function testALiveAreaTwoPagesPublishedIsSharedEvenWhenTheirDraftAreasDiffer(): void
+    {
+        $first = $this->pageId();
+        $second = $this->pageId('test_page_2');
+        $this->seeder->seedPage($first, 900);
+        $this->seeder->seedPage($second, 901);
+        $this->seeder->addLocalisedAreaTables('Page');
+        $this->seeder->seedLocalisedArea('Page', $first, 'nl_NL', 200);
+        $this->seeder->seedLocalisedArea('Page', $second, 'nl_NL', 201);
+        $this->seeder->seedLocalisedArea('Page', $first, 'nl_NL', 300, 'live');
+        $this->seeder->seedLocalisedArea('Page', $second, 'nl_NL', 300, 'live');
+
+        self::assertSame([300 => [$first, $second]], $this->discovery->getSharedAreasInLocale(['nl_NL'], false, false));
+    }
 }
