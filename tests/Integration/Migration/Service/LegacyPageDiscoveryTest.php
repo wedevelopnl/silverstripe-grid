@@ -380,6 +380,22 @@ final class LegacyPageDiscoveryTest extends MigrationTestCase
         );
     }
 
+    public function testARowWithoutAnAreaStopsTheFallbackInANonDefaultLocale(): void
+    {
+        $pageId = $this->pageId();
+        $this->seeder->seedPage($pageId, 900);
+        $this->seeder->addLocalisedAreaTables('Page');
+        $this->seeder->seedLocalisedArea('Page', $pageId, 'de_DE', 0);
+        $this->seeder->seedLocalisedArea('Page', $pageId, 'en_US', 100);
+        $this->seeder->seedLocalisedArea('Page', $pageId, 'en_US', 100, 'live');
+
+        self::assertSame(
+            [],
+            $this->discovery->getEligiblePagesInLocale(['de_DE', 'en_US'], false, false),
+            'a row without an area is the locale\'s own (empty) answer, not a reason to borrow en_US',
+        );
+    }
+
     public function testThePerLocaleVariantHonoursUseElementalGridAndThePageFilter(): void
     {
         $enabled = $this->pageId();
