@@ -69,9 +69,10 @@ final class LegacyPageDiscovery
 
     /**
      * Eligible pages for one Fluent locale. On a page table whose area is per
-     * locale ({@see getPerLocaleAreaTables()}) each stage takes its area from
-     * the first locale in `$chain` with a `_Localised` row for the page; only
-     * the default locale falls back to the base column, and only without such
+     * locale ({@see getPerLocaleAreaTables()}) the first locale in `$chain`
+     * with a draft `_Localised` row for the page supplies both stages: that
+     * row's area, and the area of its own `_Localised_Live` row, or none. Only
+     * the default locale falls back to the base columns, and only without such
      * a row. A page that resolves no draft area is left out. Any other page
      * table shares one area across locales and joins only when
      * `$withSharedAreaTables` is set.
@@ -243,25 +244,31 @@ final class LegacyPageDiscovery
         foreach (DB::prepared_query($sql, $params) as $row) {
             /** @var array<string, int|string|null> $row */
             $pageId = (int) $row['pageId'];
-            $draft = $this->resolveArea($draftAreas[$pageId] ?? [], $chain, $isDefault ? (int) $row['areaId'] : 0);
-            if ($draft['areaId'] <= 0) {
+            $source = $this->sourceLocale($draftAreas[$pageId] ?? [], $chain);
+            if ($source !== null) {
+                $areaId = $draftAreas[$pageId][$source];
+                $liveAreaId = $liveAreas[$pageId][$source] ?? 0;
+            } elseif ($isDefault) {
+                $areaId = (int) $row['areaId'];
+                $liveAreaId = (int) $row['liveAreaId'];
+            } else {
                 continue;
             }
 
-            $live = $this->resolveArea($liveAreas[$pageId] ?? [], $chain, $isDefault ? (int) $row['liveAreaId'] : 0);
+            if ($areaId <= 0) {
+                continue;
+            }
+
             /** @var class-string $pageClassName */
             $pageClassName = (string) $row['pageClassName'];
             $page = [
                 'pageId' => $pageId,
-                'areaId' => $draft['areaId'],
-                'liveAreaId' => $live['areaId'],
+                'areaId' => $areaId,
+                'liveAreaId' => $liveAreaId,
                 'pageClassName' => $pageClassName,
             ];
-            if ($draft['fallback'] !== null) {
-                $page['draftFallback'] = $draft['fallback'];
-            }
-            if ($live['fallback'] !== null) {
-                $page['liveFallback'] = $live['fallback'];
+            if ($source !== null && $source !== $chain[0]) {
+                $page['fallback'] = $source;
             }
             $pages[] = $page;
         }
@@ -301,23 +308,23 @@ final class LegacyPageDiscovery
     }
 
     /**
-     * The area of the first locale in the chain with a row, the way Fluent
-     * picked a localised field's value; `$baseAreaId` when none has one.
+     * The first locale in the chain with a draft row, the way Fluent picked a
+     * localised field's value. That locale supplies both stages: a translation
+     * it never published has no live area, and must not borrow a fallback's.
      *
-     * @param array<string, int> $areasByLocale
+     * @param array<string, int> $draftAreasByLocale
      * @param non-empty-list<non-empty-string> $chain
-     * @return array{areaId: int, fallback: non-empty-string|null} `fallback` names the
-     *     locale that supplied the area when it is not the chain's own locale
+     * @return non-empty-string|null
      */
-    private function resolveArea(array $areasByLocale, array $chain, int $baseAreaId): array
+    private function sourceLocale(array $draftAreasByLocale, array $chain): ?string
     {
-        foreach ($chain as $position => $locale) {
-            if (\array_key_exists($locale, $areasByLocale)) {
-                return ['areaId' => $areasByLocale[$locale], 'fallback' => $position === 0 ? null : $locale];
+        foreach ($chain as $locale) {
+            if (\array_key_exists($locale, $draftAreasByLocale)) {
+                return $locale;
             }
         }
 
-        return ['areaId' => $baseAreaId, 'fallback' => null];
+        return null;
     }
 
     /**

@@ -275,26 +275,71 @@ final class LegacyPageDiscoveryTest extends MigrationTestCase
         );
     }
 
-    public function testALocaleWithoutARowTakesEachStageFromTheFirstLocaleInItsChainThatHasOne(): void
+    public function testALocaleWithoutADraftRowTakesBothStagesFromTheFirstLocaleInItsChainWithOne(): void
     {
         $pageId = $this->pageId();
         $this->seeder->seedPage($pageId, 900);
         $this->seeder->addLocalisedAreaTables('Page');
         $this->seeder->seedLocalisedArea('Page', $pageId, 'nl_NL', 200);
         $this->seeder->seedLocalisedArea('Page', $pageId, 'en_US', 100);
-        $this->seeder->seedLocalisedArea('Page', $pageId, 'en_US', 100, 'live');
+        $this->seeder->seedLocalisedArea('Page', $pageId, 'en_US', 101, 'live');
         $this->seeder->seedLocalisedArea('Page', $pageId, 'fr_FR', 400, 'live');
 
         self::assertSame(
             [[
                 'pageId' => $pageId,
                 'areaId' => 100,
-                'liveAreaId' => 400,
+                'liveAreaId' => 101,
                 'pageClassName' => Page::class,
-                'draftFallback' => 'en_US',
-                'liveFallback' => 'fr_FR',
+                'fallback' => 'en_US',
             ]],
             $this->discovery->getEligiblePagesInLocale(['de_DE', 'fr_FR', 'en_US'], false, false),
+            'fr_FR has a live row only, so it supplies neither stage',
+        );
+    }
+
+    public function testALocaleWithItsOwnDraftRowButNoLiveRowHasNoLiveArea(): void
+    {
+        $pageId = $this->pageId();
+        $this->seeder->seedPage($pageId, 900);
+        $this->seeder->addLocalisedAreaTables('Page');
+        $this->seeder->seedLocalisedArea('Page', $pageId, 'de_DE', 300);
+        $this->seeder->seedLocalisedArea('Page', $pageId, 'en_US', 100);
+        $this->seeder->seedLocalisedArea('Page', $pageId, 'en_US', 100, 'live');
+
+        self::assertSame(
+            [['pageId' => $pageId, 'areaId' => 300, 'liveAreaId' => 0, 'pageClassName' => Page::class]],
+            $this->discovery->getEligiblePagesInLocale(['de_DE', 'en_US'], false, false),
+            'an unpublished translation never borrows its fallback\'s live area',
+        );
+    }
+
+    public function testTheDefaultLocaleWithItsOwnDraftRowButNoLiveRowIgnoresTheBaseLiveColumn(): void
+    {
+        $pageId = $this->pageId();
+        $this->seeder->seedPage($pageId, 900);
+        DB::prepared_query('INSERT INTO "Page_Live" ("ID", "UseElementalGrid", "ElementalAreaID") VALUES (?, 1, 901)', [$pageId]);
+        $this->seeder->addLocalisedAreaTables('Page');
+        $this->seeder->seedLocalisedArea('Page', $pageId, 'en_US', 100);
+
+        self::assertSame(
+            [['pageId' => $pageId, 'areaId' => 100, 'liveAreaId' => 0, 'pageClassName' => Page::class]],
+            $this->discovery->getEligiblePagesInLocale(['en_US'], true, true),
+        );
+    }
+
+    public function testTheDefaultLocaleWithoutARowTakesBothStagesFromTheBaseColumns(): void
+    {
+        $pageId = $this->pageId();
+        $this->seeder->seedPage($pageId, 900);
+        DB::prepared_query('INSERT INTO "Page_Live" ("ID", "UseElementalGrid", "ElementalAreaID") VALUES (?, 1, 901)', [$pageId]);
+        $this->seeder->addLocalisedAreaTables('Page');
+        $this->seeder->seedLocalisedArea('Page', $pageId, 'en_US', 100, 'live');
+
+        self::assertSame(
+            [['pageId' => $pageId, 'areaId' => 900, 'liveAreaId' => 901, 'pageClassName' => Page::class]],
+            $this->discovery->getEligiblePagesInLocale(['en_US'], true, true),
+            'a live row without a draft row does not own the locale',
         );
     }
 
