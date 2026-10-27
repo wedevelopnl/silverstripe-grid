@@ -34,6 +34,14 @@ final class LegacyTableSeeder
     ];
 
     /**
+     * Tables {@see addLocalisedAreaTables()} created, so one teardown call
+     * drops them whichever page table or prefix a test used.
+     *
+     * @var array<string, true>
+     */
+    private array $localisedAreaTables = [];
+
+    /**
      * Refuse DDL while a SapphireTest transaction is open.
      *
      * MySQL DDL implicitly commits, after which the test's ROLLBACK is a silent
@@ -138,12 +146,14 @@ final class LegacyTableSeeder
     /**
      * Drop all legacy tables.
      *
+     * Also drops the area tables {@see addLocalisedAreaTables()} created.
      * Does NOT remove extension columns from page tables. Call
      * {@see removeExtensionColumns()} separately.
      */
     public function dropTables(): void
     {
         $this->assertNoOpenTransaction('dropTables');
+        $this->removeLocalisedAreaTables();
         foreach (self::LEGACY_TABLES as $table) {
             DB::query("DROP TABLE IF EXISTS \"{$table}\"");
         }
@@ -500,15 +510,20 @@ final class LegacyTableSeeder
                     "ElementalAreaID" int NOT NULL DEFAULT 0
                 )
                 SQL);
+            $this->localisedAreaTables[$target] = true;
         }
     }
 
-    public function removeLocalisedAreaTables(string $table, string $prefix = ''): void
+    /**
+     * Drop every table {@see addLocalisedAreaTables()} created; {@see dropTables()} does it too.
+     */
+    public function removeLocalisedAreaTables(): void
     {
         $this->assertNoOpenTransaction('removeLocalisedAreaTables');
-        foreach ([$prefix . $table . '_Localised', $prefix . $table . '_Localised_Live'] as $target) {
+        foreach (\array_keys($this->localisedAreaTables) as $target) {
             DB::query("DROP TABLE IF EXISTS \"{$target}\"");
         }
+        $this->localisedAreaTables = [];
     }
 
     /**

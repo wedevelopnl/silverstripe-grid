@@ -36,7 +36,6 @@ final class MigrateGridTaskGuardTest extends SapphireTest
 
     protected function tearDown(): void
     {
-        $this->seeder->removeLocalisedAreaTables('Page');
         $this->seeder->removeElementalAreaColumn('Page');
         $this->seeder->removeFieldLocalisedTables();
         $this->seeder->removeLocaleIdColumn();
