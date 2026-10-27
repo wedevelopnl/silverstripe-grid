@@ -215,6 +215,8 @@ The task accepts the same options as `migrate-grid` (see the [Options Reference]
 ### Additional prerequisites
 
 - **The legacy `Element_Localised` / `*_Localised` (and `_Live`) tables must still be present.** If `dev/build` moved them to `_obsolete_*` after the old element relation was dropped, rename them back first — the migration reads legacy tables by name.
+- **A page table's per-locale `ElementalAreaID` must be back under its own name.** When a page type stored its elemental area per locale, its `<Table>_Localised` table holds the `ElementalAreaID` column. If `dev/build` renamed that table to `_obsolete_<Table>_Localised` (and `_obsolete_<Table>_Localised_Live`), the task refuses to start — also under `--dry-run` — names the page table and the tables to rename, and changes nothing. Rename both back to `<Table>_Localised` and `<Table>_Localised_Live`, then run the task again.
+- **Every locale to migrate must exist in the SS6 `Locale` table.** The task migrates the locales Fluent knows now; legacy rows stored under a locale code that is no longer configured are ignored.
 - Fluent must be installed and wired into the grid as described in [Fluent (multi-locale) support](fluent.md).
 
 ### How the task works
@@ -230,6 +232,15 @@ It inspects the database table shape to determine which Fluent strategy the Silv
 | Neither | Single-locale | No locale-specific data; elements are migrated once into the default locale only. |
 | Both | Unsupported | Ambiguous mixed configuration — the task aborts with an error. |
 
+It also checks every page table that carries `ElementalAreaID`, independently of the element model above:
+
+| Page table shape | Area per page | Locales migrated |
+|------------------|---------------|------------------|
+| `<Table>_Localised` has an `ElementalAreaID` column | One area per locale, read from `<Table>_Localised` (draft) and `<Table>_Localised_Live` (live) | Every locale |
+| No such column | One area shared by every locale (the page table's own column) | The default locale only, unless the element model above is field-localised or isolated |
+
+A site can mix both: a page type whose area is per locale next to page types that share one area. Each page follows the row of its own table. When any page table is per locale, the task migrates every locale; a page whose table shares one area across locales is still migrated in the default locale only, unless the elements themselves are localised.
+
 > **Isolated model prerequisite — Locale IDs must be stable.** The migration filters legacy element rows by `LocaleID`, treating those integers as equal to the current Fluent `Locale` record IDs. That holds for a standard in-place SilverStripe 5 → 6 upgrade, where the same database is carried forward and the `Locale` rows keep their original IDs. **If the `Locale` records were deleted and recreated between the time the legacy content was authored and when you run the migration, the IDs will differ, and the Isolated per-locale filter may select the wrong content or return nothing at all.** Verify your `Locale` table IDs are unchanged before running the task on an Isolated site.
 
 ### What differs per locale
@@ -238,7 +249,13 @@ It inspects the database table shape to determine which Fluent strategy the Silv
 
 **Untranslated elements fall back to base content.** In the field-localised model, an element with no `*_Localised` row for a given locale is migrated using its base content. This matches Fluent's render-time fallback and ensures nothing is silently omitted.
 
+**Each locale's blocks come from its own area.** On a page table whose area is per locale, every locale is converted from the area its `<Table>_Localised` row points at — the draft area for the draft grid, the live area (`<Table>_Localised_Live`) for the live one. The page table's own `ElementalAreaID` is not used for that page, even though it points at whichever locale's area was saved last; only the default locale falls back to it, and only when the page has no `_Localised` row in the default locale.
+
+**A locale without its own area gets a copy of its fallback's blocks.** When a page has no `_Localised` row in a locale, that locale takes the area of the first locale in its Fluent fallback chain (`Fluent_FallbackLocale`, in `Sort` order) that has one, separately for draft and for live — the blocks the old site showed there. The copy is independent: it gets its own records, and editing the source locale's blocks afterwards leaves it unchanged. The log names the locale that supplied it. When no locale in the chain has a row for the page, the page gets no grid in that locale.
+
 **`UseGrid` is a shared page flag.** It is excluded from Fluent localisation in the module's `_config/fluent.yml` and is set once on the page record — not per locale — when the migration completes successfully.
+
+> **Sites converted with an earlier release are not repaired.** Before per-locale areas were recognised, such a site was converted as single-language: only the default locale got a grid, filled from whichever locale's area was saved last. Re-running the task does not correct that: every page that already has Sections in a locale is skipped as already migrated. To convert such a page again, delete its Section tree in the affected locales first (see [Idempotency and Re-running](#idempotency-and-re-running)).
 
 ### Not the same as `AssignGridLocaleTask`
 
@@ -739,6 +756,8 @@ Carry the block link FK fields across during the grid pass with the `updateEleme
 **"Legacy element table "Element" not found."** — The database does not hold the elemental tables of a site on the supported source (see [Requirements](#requirements)), so the task refuses before the banner and the confirmation prompts and changes nothing. The message names every missing table (`Element`, `Element_Live`). Check that you run the task against the upgraded copy of the SS5 database, and that `dev/build` did not rename the tables to `_obsolete_*`; rename them back if it did.
 
 **"Legacy element table "Element_Versions" not found; new grid elements cannot be numbered above the legacy ones."** — A run that writes raises the new element numbering above every legacy ID first (see [Before You Begin](#before-you-begin)) and reads all three legacy element tables for it. It stops before the first page and changes nothing. Restore the table from the SS5 database, or rename it back from `_obsolete_*`.
+
+**"Page table "Page": legacy table "_obsolete_Page_Localised" holds the per-locale ElementalAreaID that "Page_Localised" lacks (set aside by dev/build)."** — `migrate-grid-with-fluent` found the per-locale area of that page type only in a table `dev/build` set aside. It refuses before the confirmation prompts and changes nothing, under `--dry-run` too. Rename the tables back as the message says (see [Additional prerequisites](#additional-prerequisites)) and run the task again.
 
 **"Page X already migrated for zone Y, skipping."** — The idempotency check found at least one `Section` for that page and zone on draft. If you need to redo the page, delete its new Section tree first.
 
