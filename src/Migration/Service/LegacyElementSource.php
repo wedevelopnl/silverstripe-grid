@@ -12,17 +12,16 @@ use WeDevelop\Grid\Migration\DTO\LegacyElement;
  * Implemented directly by {@see LegacyDataReader} (default/base-locale reads)
  * and by a locale-scoped decorator used by the Fluent orchestrator.
  *
- * An eligible page's `liveAreaId` is 0 when it has no live area; a
- * `*Fallback` names the locale whose area a stage borrows because the page
- * has none of its own in the locale being migrated.
+ * An eligible page's `liveAreaId` is 0 when it has no live area; `fallback`
+ * names the locale whose areas both stages borrow because the page has none
+ * of its own in the locale being migrated.
  *
  * @phpstan-type EligiblePage array{
  *     pageId: int,
  *     areaId: int,
  *     liveAreaId: int,
  *     pageClassName: class-string,
- *     draftFallback?: non-empty-string,
- *     liveFallback?: non-empty-string,
+ *     fallback?: non-empty-string,
  * }
  */
 interface LegacyElementSource

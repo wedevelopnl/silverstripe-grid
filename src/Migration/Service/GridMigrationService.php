@@ -209,7 +209,7 @@ final class GridMigrationService
             return null;
         }
 
-        $this->logBorrowedAreas($page);
+        $this->logBorrowedArea($page);
 
         // Step 2: Read DRAFT legacy elements
         $draftElements = $this->reader->getElementsForArea($page['areaId'], 'draft');
@@ -304,15 +304,13 @@ final class GridMigrationService
     /**
      * @param EligiblePage $page
      */
-    private function logBorrowedAreas(array $page): void
+    private function logBorrowedArea(array $page): void
     {
-        foreach (['draft' => $page['draftFallback'] ?? null, 'live' => $page['liveFallback'] ?? null] as $stage => $source) {
-            if ($source !== null) {
-                $this->logger->info(
-                    'Page {pageId} has no {stage} content area of its own in {locale}; migrating a copy of the one in {source}.',
-                    ['pageId' => $page['pageId'], 'stage' => $stage, 'locale' => $this->locale, 'source' => $source],
-                );
-            }
+        if (isset($page['fallback'])) {
+            $this->logger->info(
+                'Page {pageId} has no content area of its own in {locale}; migrating a copy of the one in {source}.',
+                ['pageId' => $page['pageId'], 'locale' => $this->locale, 'source' => $page['fallback']],
+            );
         }
     }
 

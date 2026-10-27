@@ -216,11 +216,23 @@ final class FluentPerLocaleAreaMigrationTest extends FluentMigrationTestCase
             static fn (array $entry): bool => \str_contains($entry['message'], 'content area of its own'),
         ));
         self::assertSame(
-            [
-                ['pageId' => $pageId, 'stage' => 'draft', 'locale' => 'de_DE', 'source' => 'en_US'],
-                ['pageId' => $pageId, 'stage' => 'live', 'locale' => 'de_DE', 'source' => 'en_US'],
-            ],
+            [['pageId' => $pageId, 'locale' => 'de_DE', 'source' => 'en_US']],
             \array_column($borrowed, 'context'),
         );
+    }
+
+    public function testAnUnpublishedTranslationGetsNoLiveBlocksFromItsFallback(): void
+    {
+        $pageId = $this->pageId();
+        $this->seedOwnAreas($pageId);
+        $this->seeder->seedLocalisedArea('Page', $pageId, 'de_DE', 400);
+        $this->seeder->seedElement(7400, 400, self::CONTENT_CLASS, 1, ['Title' => 'Willkommen']);
+        $this->seeder->seedContentMedia(7400);
+
+        self::assertSame(0, $this->runMigration($pageId));
+
+        self::assertSame(['Willkommen'], $this->contentTitlesInLocale('de_DE'));
+        self::assertSame([], $this->liveContentTitlesInLocale('de_DE'));
+        self::assertSame(['Welcome'], $this->liveContentTitlesInLocale('en_US'));
     }
 }
