@@ -36,12 +36,12 @@ class UserFormElementResolver
         $owner = $element->getPage();
 
         if ($owner instanceof SiteTree) {
-            return (int) $owner->ID === (int) $page->ID ? $element : null;
+            return $owner->ID === $page->ID ? $element : null;
         }
 
         if ($owner instanceof SharedBlock) {
             foreach ($this->usageResolver->pagesUsing($owner) as $using) {
-                if ($using instanceof SiteTree && (int) $using->ID === (int) $page->ID) {
+                if ($using instanceof SiteTree && $using->ID === $page->ID) {
                     return $element;
                 }
             }
