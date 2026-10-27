@@ -29,4 +29,7 @@ class Locale
     public static function getCached() {}
 
     public static function clearCached(): void {}
+
+    /** @return iterable<static> this locale, then its fallbacks in Sort order */
+    public function getChain() {}
 }
