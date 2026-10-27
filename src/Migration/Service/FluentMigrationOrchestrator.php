@@ -63,12 +63,15 @@ final readonly class FluentMigrationOrchestrator
         $defaultCode = $default?->Locale;
 
         $summaries = [];
-        foreach ($this->localePlan($model) as $localeCode => $localeId) {
+        foreach ($this->localePlan($model) as $localeCode => $locale) {
+            $localeId = $locale->ID;
+            $chain = $this->chainOf($locale, $localeCode);
             $isDefault = $localeCode === $defaultCode;
             $summaries[$localeCode] = FluentState::singleton()->withState(
                 function (FluentState $state) use (
                     $localeCode,
                     $localeId,
+                    $chain,
                     $model,
                     $defaultViewport,
                     $zone,
@@ -85,7 +88,7 @@ final readonly class FluentMigrationOrchestrator
                         'default' => $isDefault ? ' (default)' : '',
                     ]);
 
-                    $source = new LocaleScopedLegacySource($this->reader, $model, $localeCode, $localeId);
+                    $source = new LocaleScopedLegacySource($this->reader, $model, $localeCode, $localeId, $chain, $isDefault);
                     $service = new GridMigrationService(
                         $source,
                         $this->mapper,
@@ -107,30 +110,46 @@ final readonly class FluentMigrationOrchestrator
     }
 
     /**
-     * Locales to migrate, default first. For the None model only the default
-     * locale is migrated (legacy content is single-locale and must not be
-     * duplicated into other locales).
+     * Locales to migrate, default first. Only the default locale is migrated
+     * when neither the elements nor any page's area are localised (legacy
+     * content is single-locale and must not be duplicated into other locales).
      *
-     * @return array<non-empty-string, positive-int> locale code → Locale record ID
+     * @return array<non-empty-string, Locale> locale code → Locale record (ID is positive-int)
      */
     private function localePlan(LegacyLocalisationModel $model): array
     {
         $default = Locale::getDefault();
 
-        /** @var array<non-empty-string, positive-int> $plan */
+        /** @var array<non-empty-string, Locale> $plan */
         $plan = [];
         if ($default !== null) {
-            $plan[$default->Locale] = $default->ID;
+            $plan[$default->Locale] = $default;
         }
 
-        if ($model === LegacyLocalisationModel::None) {
+        if ($model === LegacyLocalisationModel::None && $this->detector->perLocaleAreaTables() === []) {
             return $plan;
         }
 
         foreach (Locale::getCached() as $locale) {
-            $plan[$locale->Locale] = $locale->ID;
+            $plan[$locale->Locale] = $locale;
         }
 
         return $plan;
+    }
+
+    /**
+     * @param non-empty-string $localeCode
+     * @return non-empty-list<non-empty-string> the locale, then its fallbacks in Sort order
+     */
+    private function chainOf(Locale $locale, string $localeCode): array
+    {
+        $chain = [$localeCode];
+        foreach ($locale->getChain() as $link) {
+            if (!\in_array($link->Locale, $chain, true)) {
+                $chain[] = $link->Locale;
+            }
+        }
+
+        return $chain;
     }
 }

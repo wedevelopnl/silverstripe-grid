@@ -1,0 +1,25 @@
+TractorCow\Fluent\Model\Locale:
+  en:
+    Locale: en_US
+    Title: English
+    IsGlobalDefault: 1
+  nl:
+    Locale: nl_NL
+    Title: Dutch
+  de:
+    Locale: de_DE
+    Title: German
+  fr:
+    Locale: fr_FR
+    Title: French
+
+TractorCow\Fluent\Model\FallbackLocale:
+  de_falls_back_to_en:
+    Parent: =>TractorCow\Fluent\Model\Locale.de
+    Locale: =>TractorCow\Fluent\Model\Locale.en
+    Sort: 1
+
+Page:
+  test_page:
+    Title: 'Integration Test Page'
+    URLSegment: 'integration-test'

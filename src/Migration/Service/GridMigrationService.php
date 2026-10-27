@@ -26,6 +26,8 @@ use WeDevelop\Grid\Value\MigrationIdMap;
  * configured strategy into Section/Row/Column hierarchy, writes new records
  * with proper Versioned stage handling, and maintains old→new ID mappings
  * for live reconciliation.
+ *
+ * @phpstan-import-type EligiblePage from LegacyElementSource
  */
 final class GridMigrationService
 {
@@ -118,7 +120,6 @@ final class GridMigrationService
             foreach ($eligiblePages as $pageInfo) {
                 $pageId = $pageInfo['pageId'];
                 $areaId = $pageInfo['areaId'];
-                $pageClassName = $pageInfo['pageClassName'];
                 $afterMigrate = new AfterMigrateHook(
                     $pageId,
                     $areaId,
@@ -127,7 +128,7 @@ final class GridMigrationService
                 );
 
                 try {
-                    $pageBlocks = $this->migratePage($pageId, $areaId, $pageClassName, $zone, $dryRun, $defaultViewport, $viewportKeyMap, $afterMigrate);
+                    $pageBlocks = $this->migratePage($pageInfo, $zone, $dryRun, $defaultViewport, $viewportKeyMap, $afterMigrate);
                     if ($pageBlocks === null) {
                         ++$skipped;
                     } else {
@@ -183,21 +184,22 @@ final class GridMigrationService
      * {@see RowMappingStrategy} (constructed with the default viewport and
      * viewport key map), so those values are not threaded through here.
      *
-     * @param class-string $pageClassName Concrete page class (e.g. 'Page', not 'SiteTree')
+     * @param EligiblePage $page Draft elements come from its `areaId`, live ones from its `liveAreaId`
      * @param string $defaultViewport Old viewport key used as default (e.g. 'MD'), for live grid-settings reconciliation
      * @param array<string, string> $viewportKeyMap Old viewport key → new key, for live grid-settings reconciliation
      * @return int<0, max>|null Content blocks migrated, or null when the page was already migrated
      */
     private function migratePage(
-        int $pageId,
-        int $areaId,
-        string $pageClassName,
+        array $page,
         string $zone,
         bool $dryRun,
         string $defaultViewport,
         array $viewportKeyMap,
         AfterMigrateHook $afterMigrate,
     ): ?int {
+        $pageId = $page['pageId'];
+        $pageClassName = $page['pageClassName'];
+
         // Step 1: Idempotency — skip if Sections already exist for this page + zone
         if ($this->hasExistingSections($pageId, $pageClassName, $zone)) {
             $this->logger->info('Page {pageId} already migrated for zone "{zone}", skipping.', [
@@ -207,8 +209,10 @@ final class GridMigrationService
             return null;
         }
 
+        $this->logBorrowedAreas($page);
+
         // Step 2: Read DRAFT legacy elements
-        $draftElements = $this->reader->getElementsForArea($areaId, 'draft');
+        $draftElements = $this->reader->getElementsForArea($page['areaId'], 'draft');
 
         // Step 3-4: Build hierarchy via strategy (works on draft elements)
         $sections = $draftElements !== []
@@ -221,13 +225,13 @@ final class GridMigrationService
             // live area has live-only elements that the real run creates as their
             // own hierarchy on both stages. Without this the preview reports
             // "no elements to migrate" and understates what the real run writes.
-            $liveElements = $this->reader->getElementsForArea($areaId, 'live');
+            $liveElements = $this->readLiveElements($page['liveAreaId']);
             $this->logDryRun($pageId, $sections, $this->countLiveOnlyElements($draftElements, $liveElements));
             return $this->countContentBlocks($draftElements, $liveElements);
         }
 
         // No draft sections and no live elements means nothing to migrate
-        $liveElements = $this->reader->getElementsForArea($areaId, 'live');
+        $liveElements = $this->readLiveElements($page['liveAreaId']);
         if ($sections === [] && $liveElements === []) {
             $this->logger->info('Page {pageId} has no elements to migrate.', ['pageId' => $pageId]);
             return 0;
@@ -287,6 +291,29 @@ final class GridMigrationService
         $this->logger->info('Successfully migrated page {pageId}.', ['pageId' => $pageId]);
 
         return $this->countContentBlocks($draftElements, $liveElements);
+    }
+
+    /**
+     * @return list<LegacyElement>
+     */
+    private function readLiveElements(int $liveAreaId): array
+    {
+        return $liveAreaId > 0 ? $this->reader->getElementsForArea($liveAreaId, 'live') : [];
+    }
+
+    /**
+     * @param EligiblePage $page
+     */
+    private function logBorrowedAreas(array $page): void
+    {
+        foreach (['draft' => $page['draftFallback'] ?? null, 'live' => $page['liveFallback'] ?? null] as $stage => $source) {
+            if ($source !== null) {
+                $this->logger->info(
+                    'Page {pageId} has no {stage} content area of its own in {locale}; migrating a copy of the one in {source}.',
+                    ['pageId' => $page['pageId'], 'stage' => $stage, 'locale' => $this->locale, 'source' => $source],
+                );
+            }
+        }
     }
 
     /**
