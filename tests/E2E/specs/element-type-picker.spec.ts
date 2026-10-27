@@ -54,6 +54,11 @@ test.describe('Element type picker', () => {
     await expect(picker).toBeHidden()
     await expect(page.getByTestId('grid-editor-loading')).toBeHidden({ timeout: 15_000 })
     await expect(elementCards).toHaveCount(3)
+    // The new block's default title names its type: "Content element 1" had
+    // Enter added the wrong match.
+    await expect(
+      page.getByTestId('element-card-title').getByText('Media 1', { exact: true }),
+    ).toBeVisible()
   })
 
   test('editor steps into the shared block chooser and back to the type picker', async ({
