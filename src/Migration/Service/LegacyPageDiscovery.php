@@ -182,17 +182,13 @@ final class LegacyPageDiscovery
             }
         }
 
-        $params = [];
-
-        if ($pageIds !== null && $pageIds !== []) {
-            $placeholders = \implode(', ', \array_fill(0, \count($pageIds), '?'));
-            $idColumn = $isSiteTreeTable ? '"ID"' : \sprintf('"%s"."ID"', $table);
-            $sql .= " AND {$idColumn} IN ({$placeholders})";
-            $params = $pageIds;
+        $idColumn = $isSiteTreeTable ? '"ID"' : \sprintf('"%s"."ID"', $table);
+        [$pageCondition, $params] = $this->pageIdCondition($idColumn, $pageIds);
+        if ($pageCondition !== '') {
+            $sql .= " AND {$pageCondition}";
         }
 
-        $orderColumn = $isSiteTreeTable ? '"ID"' : \sprintf('"%s"."ID"', $table);
-        $sql .= " ORDER BY {$orderColumn} ASC";
+        $sql .= " ORDER BY {$idColumn} ASC";
 
         $pages = [];
         foreach (DB::prepared_query($sql, $params) as $row) {
@@ -223,14 +219,13 @@ final class LegacyPageDiscovery
     private function perLocaleAreaPages(string $baseTable, array $chain, bool $isDefault, ?array $pageIds): array
     {
         $conditions = [];
-        $params = [];
         if ($this->tableHasColumn($baseTable, 'UseElementalGrid')) {
             $conditions[] = \sprintf('"%s"."UseElementalGrid" = 1', $baseTable);
         }
 
-        if ($pageIds !== null && $pageIds !== []) {
-            $conditions[] = \sprintf('"%s"."ID" IN (%s)', $baseTable, \implode(', ', \array_fill(0, \count($pageIds), '?')));
-            $params = $pageIds;
+        [$pageCondition, $params] = $this->pageIdCondition(\sprintf('"%s"."ID"', $baseTable), $pageIds);
+        if ($pageCondition !== '') {
+            $conditions[] = $pageCondition;
         }
 
         $where = $conditions === [] ? '' : 'WHERE ' . \implode(' AND ', $conditions);
@@ -301,19 +296,34 @@ final class LegacyPageDiscovery
             $localisedTable,
             \implode(', ', \array_fill(0, \count($chain), '?')),
         );
-        $params = $chain;
-        if ($pageIds !== null && $pageIds !== []) {
-            $sql .= \sprintf(' AND "RecordID" IN (%s)', \implode(', ', \array_fill(0, \count($pageIds), '?')));
-            $params = [...$params, ...$pageIds];
+        [$pageCondition, $pageParams] = $this->pageIdCondition('"RecordID"', $pageIds);
+        if ($pageCondition !== '') {
+            $sql .= " AND {$pageCondition}";
         }
 
         $areas = [];
-        foreach (DB::prepared_query($sql, $params) as $row) {
+        foreach (DB::prepared_query($sql, [...$chain, ...$pageParams]) as $row) {
             /** @var array{RecordID: int|string, Locale: string, ElementalAreaID: int|string|null} $row */
             $areas[(int) $row['RecordID']][$row['Locale']] = (int) $row['ElementalAreaID'];
         }
 
         return $areas;
+    }
+
+    /**
+     * The optional page filter as a condition on `$column` with its params;
+     * an empty condition when `$pageIds` filters nothing.
+     *
+     * @param list<int>|null $pageIds
+     * @return array{string, list<int>}
+     */
+    private function pageIdCondition(string $column, ?array $pageIds): array
+    {
+        if ($pageIds === null || $pageIds === []) {
+            return ['', []];
+        }
+
+        return [\sprintf('%s IN (%s)', $column, \implode(', ', \array_fill(0, \count($pageIds), '?'))), $pageIds];
     }
 
     /**
