@@ -110,6 +110,27 @@ test.describe('Media elements', () => {
       await expect(gapSizeHolder).toBeHidden()
     })
 
+    await test.step('The tile holding keyboard focus shows the focus ring', async () => {
+      // The radio itself is invisible, so the ring has to be drawn on the tile
+      // (the <label> wrapping it). Arrow keys move focus and selection together.
+      const fullWidthOption = page.getByRole('radio', { name: /Full width/ })
+      const splitOption4 = page.getByRole('radio', { name: /4\/8/ })
+      const tileOf = (radio: typeof splitOption4) => page.locator('label').filter({ has: radio })
+
+      await fullWidthOption.focus()
+      await page.keyboard.press('ArrowRight')
+
+      await expect(splitOption4).toBeFocused()
+      await expect(splitOption4).toBeChecked()
+      await expect(tileOf(splitOption4)).toHaveCSS('outline-style', 'solid')
+      await expect(tileOf(splitOption4)).toHaveCSS('outline-width', '2px')
+      await expect(tileOf(fullWidthOption)).toHaveCSS('outline-style', 'none')
+
+      await page.keyboard.press('ArrowLeft')
+      await expect(fullWidthOption).toBeChecked()
+      await expect(tileOf(fullWidthOption)).toHaveCSS('outline-style', 'solid')
+    })
+
     await test.step('Configure layout settings', async () => {
       // Select the 8/4 split for the save+render test (click the visible label;
       // the underlying radio is opacity:0).

@@ -22,8 +22,12 @@
    reasons: a control clipped by an `overflow: hidden` ancestor needs a negative
    offset to stay visible, and a control flush against a container edge needs 0
    so the ring does not spill outside it. Vary it by setting
-   `--ssgrid-focus-ring-offset` in the control's own rule. */
-.ssgrid-focus-ring:focus-visible {
+   `--ssgrid-focus-ring-offset` in the control's own rule.
+   `.ssgrid-focus-ring-within` draws the same ring on a wrapper whose control is
+   visually hidden — a tile wrapping a native radio — because there the focused
+   element itself has nothing to paint. */
+.ssgrid-focus-ring:focus-visible,
+.ssgrid-focus-ring-within:has(:focus-visible) {
   outline: 2px solid var(--ssgrid-border-focus);
   outline-offset: var(--ssgrid-focus-ring-offset, 2px);
 }
