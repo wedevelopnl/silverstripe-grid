@@ -209,4 +209,22 @@ final class RepairSharedBlockPlacementsTaskTest extends SapphireTest
             $broken->ID,
         ), $result['output']);
     }
+
+    public function testLeavesAPlacementForManualReviewOnEveryStage(): void
+    {
+        // Its live rows are intact, so the live pass alone could classify it;
+        // removing it there would contradict the line that leaves it to a person.
+        $block = GridTreeFactory::sharedBlock();
+        $reference = GridTreeFactory::reference($this->page(), $block);
+        $reference->publishSingle();
+        DB::prepared_query(sprintf('DELETE FROM "%s" WHERE "ID" = ?', self::ELEMENT_TABLE), [$reference->ID]);
+        $this->strand($block);
+
+        $result = $this->runTask();
+
+        self::assertSame(Command::FAILURE, $result['exitCode']);
+        self::assertSame(1, $this->rowCount(self::REFERENCE_TABLE, (int) $reference->ID), 'draft row kept');
+        self::assertSame(1, $this->rowCount(self::REFERENCE_TABLE, (int) $reference->ID, '_Live'), 'live row kept');
+        self::assertStringNotContainsString('removed', $result['output']);
+    }
 }
