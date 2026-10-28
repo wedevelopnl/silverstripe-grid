@@ -646,6 +646,38 @@ final class FluentSharedBlockTest extends FluentGridTestCase
         self::assertSame(['Shared leaf'], $titles('en_US', Versioned::LIVE), 'English is kept as before');
     }
 
+    public function testDeletingLeavesAPageUnlocalisedWhereItWasPlacedWithoutBeingLocalised(): void
+    {
+        // The grid editor can place a block on a page in a locale the page
+        // itself has not been saved in yet.
+        $page = $this->createPage('Contact');
+        GridTreeFactory::section($page, zone: 'main', title: 'English section');
+        $block = $this->populatedBlock();
+        $this->inLocale('nl_NL', static function () use ($page, $block): void {
+            GridTreeFactory::reference($page, $block, zone: 'main');
+        });
+        self::assertFalse(
+            $this->inLocale('nl_NL', static fn (): bool => $page->existsInLocale()),
+            'precondition: the page is not localised in Dutch',
+        );
+
+        $result = Injector::inst()->get(SharedBlockService::class)->delete($block, SharedBlockDeleteMode::Remove);
+
+        self::assertTrue($result->isOk(), 'the delete must succeed');
+        self::assertFalse(
+            $this->inLocale('nl_NL', fn (): bool => (bool) Page::get()->byID($page->ID)?->existsInLocale()),
+            'the delete localises no page',
+        );
+        self::assertSame(
+            [],
+            $this->inLocale('nl_NL', fn (): array => Section::get()->filter([
+                'ParentID' => $page->ID,
+                'ParentClass' => Page::class,
+            ])->column('Title')),
+            'nor copies the English grid into Dutch',
+        );
+    }
+
     public function testRemovingTheBlockLeavesNothingInAnyLocale(): void
     {
         ['block' => $block, 'page' => $page] = $this->blockPublishedInBothLocales();

@@ -645,7 +645,8 @@ class SharedBlockService
 
     /**
      * The consuming pages now render something else, so each needs a draft
-     * version recording that — in the locale whose placement changed.
+     * version recording that — in the locale whose placement changed, where
+     * the page is localised.
      *
      * @param array<string, LocaleUsage> $usage
      */
@@ -653,6 +654,14 @@ class SharedBlockService
     {
         $this->locales->each(static function (?Locale $locale) use ($usage): void {
             foreach ($usage[(string) $locale?->Locale]['pages'] ?? [] as $page) {
+                // Writing a page in a locale it is not localised in localises
+                // it, and Fluent's localised copy then imports another
+                // locale's grid. Asked through extend(): without Fluent there
+                // is no answer, and every page is written.
+                if ($locale !== null && in_array(false, $page->extend('existsInLocale'), true)) {
+                    continue;
+                }
+
                 $page->writeToStage(Versioned::DRAFT);
             }
         });
