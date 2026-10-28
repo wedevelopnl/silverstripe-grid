@@ -6,7 +6,7 @@ action: warn
 conditions:
   - field: content
     operator: regex_match
-    pattern: Injector::inst\(\)->(get|create)\(
+    pattern: Injector::inst\(\)\s*->(get|create)\(
   - field: file_path
     operator: regex_match
     pattern: src/
