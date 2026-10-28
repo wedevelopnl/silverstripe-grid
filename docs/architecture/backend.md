@@ -57,15 +57,15 @@ The hierarchy is fixed in code — the `ContainerType` enum (`src/Value/Containe
 
 Section and Row are strict — only the single mapped child class (or a subclass) is accepted. Column is permissive — `isChildAllowed()` accepts any `GridElement` subclass that is not itself a container. There are no `allowed_elements` / `disallowed_elements` / `can_be_root` YAML statics; those keys are not read anywhere.
 
-### Zone-Scoped Sections
+### Zones
 
-Sections carry a `Zone` field (`Varchar(50)`, e.g., `"main"`, `"sidebar"`) that partitions them within a page. Sort values are independent per zone per parent — the main zone has Sort 1, 2, 3 and the sidebar zone independently has Sort 1, 2, 3. All queries (tree loading, sort assignment, reorder) filter by zone at the root level.
+Page roots — Sections and shared-block placements alike — carry a `Zone` (`Varchar(50)`, e.g., `"main"`, `"sidebar"`) that partitions them within a page. The field is declared on `GridElement`, the base table, so one indexed query returns a zone's whole root sequence. Sort values are independent per zone per parent — the main zone has Sort 1, 2, 3 and the sidebar zone independently has Sort 1, 2, 3. All queries (tree loading, sort assignment, reorder) filter by zone at the root level.
 
 **The invariant: Zone is non-empty exactly when the element sits directly on a page.** A root without one renders in no zone, and a nested element with one is skipped by every zone read, so both are refused at write time by `GridElement::validate()`, using the same `isZoneScoped()` test that decides where a zone applies (`ParentClass` is a `SiteTree` subclass). It lives on the model rather than in `HierarchyValidationExtension` because it is an invariant on the element's own column: that extension passes orphans early and a project may detach it. It applies on every stage, so publishing, reverting, duplicating or Fluent-copying a page that holds an older bad row fails until the row is repaired. `api/place` refuses a page-root placement without a zone up front (`SharedBlockService::place()`), before the block is localised into the active locale. Rows written before the rule are repaired by the one-time `sake tasks:repair-grid-zone` (`RepairGridZoneTask`): it gives a zone-less root its page's only zone, clears a zone below page level, and lists what it cannot decide — see the CHANGELOG's Upgrading notes.
 
 **Why a string field, not a model.** Zone is a partition key — a named slot on a page, not an entity with its own lifecycle. The structural relationship between elements and pages is handled by the polymorphic parent (`ParentID + ParentClass`); Zone simply subdivides that parent's children into independent groups. A separate `Zone` model or intermediary table (as SS5's `ElementalArea` was) would add a DB table, extra writes on every page save, and more complex tree queries — all to accomplish what a simple string field does.
 
-**CMS field exposure.** Zone is an internal system field, never exposed in the CMS edit form. `GridElement::getCMSFields()` explicitly removes it from the scaffolded field list. The zone value is set programmatically when a Section is created via the API — the `GridEditorField` passes its configured zone to the controller, which applies it to new Sections.
+**CMS field exposure.** Zone is an internal system field, never exposed in the CMS edit form. `GridElement::getCMSFields()` explicitly removes it from the scaffolded field list. The zone value is set programmatically when a root is created via the API — the `GridEditorField` passes its configured zone to the controller, which applies it to new Sections and placements.
 
 **Multi-zone pages.** A page supports multiple zones by adding multiple `GridEditorField` instances, each configured with a different zone string; `GridZoneResolver::zonesFor()` reads them back from the page's CMS fields. Each editor mounts as an independent React application with its own API calls, query cache, and tree state. The module ships no page type of its own; `.docker/app/src/MultiZonePage.php` is the test harness's two-zone example.
 
@@ -94,7 +94,7 @@ Two value objects model this data: `ViewportConfig` (readonly record of width/of
 
 `GridSettingsResolver` resolves the effective `ViewportConfig` for each active viewport by applying overrides on top of the default. The resolver supports two strategies via `OverrideStrategy`:
 - **Isolated** (default): each viewport uses the default unless it has an explicit override.
-- **Cascade**: overrides carry forward to subsequent viewports (mobile-first), configurable via `override_strategy: cascade` on `GridSettingsResolver`.
+- **Cascade**: overrides carry forward to subsequent viewports (mobile-first), selected through the resolver's `overrideStrategy` constructor argument — see [Override Strategy](#override-strategy-module-config).
 
 The Column model exposes `getGridSettings(): GridSettings` and `setGridSettings(GridSettings)` for typed access, routing through `DBGridSettings` via `dbObject()`.
 
@@ -256,7 +256,7 @@ Invalid payloads produce HTTP 400. Validation failures from the service layer pr
 
 | Check | Applies to |
 |-------|-----------|
-| CSRF token | All mutations (controller `init()` rejects non-GET without valid token) |
+| CSRF token | Every action outside the controller's `READ_ONLY_ACTIONS` allowlist — checked per action in `GridApiController::handleAction()`, not by HTTP verb; a new read-only action must be added to that list explicitly |
 | `canView()` on page | `readTree`, `readTreeAtVersion`, `acceptableContainers`, `zones` |
 | `canEdit()` on target parent | Create, reorder, duplicateTo |
 | `canEdit()` on page | `resetGridSettingsOverrides` |
@@ -307,16 +307,16 @@ Domain service for column `GridSettings` mutations. `updateSettings()` applies v
 
 ### GridTreeService
 
-Builds the full element tree for a page using breadth-first batch loading — one query per hierarchy depth level.
+Builds the full element tree for a page using breadth-first batch loading — one `OrmGridElementRepository::findByParents()` query per hierarchy depth level, grouped by parent class.
 
 ```
 buildViewableTree(page, zone)
   │
   ├─ loadAllElements()
-  │    ├─ Level 0: query Sections by page (zone-filtered)
-  │    ├─ Level 1: query Rows by all Section IDs
-  │    ├─ Level 2: query Columns by all Row IDs
-  │    └─ Level 3: query content elements by all Column IDs
+  │    ├─ Level 0: page roots — Sections and shared-block placements (zone-filtered)
+  │    ├─ Level 1: children of every container loaded at level 0
+  │    ├─ Level 2: …and so on, until a level loads no container
+  │    └─ (a placement's block subtree is loaded separately by buildReferenceNode(), memoised per block)
   │
   └─ assembleSubTree()
        └─ Recursive in-memory assembly + GridNodeMapper conversion
@@ -357,7 +357,7 @@ Both splice the element into its parent's sibling list and reindex `Sort`. The t
 reorder(element, targetParent, afterElementId)
   │
   ├─ Validate (ReorderValidatorInterface)
-  │    └─ Hierarchy rule check (applies to both same- and cross-parent)
+  │    └─ Placement rule check (skipped for same-parent moves)
   │
   ├─ Compute sort order (in-memory)
   │    └─ Load siblings, splice, reindex
@@ -372,7 +372,7 @@ Each step returns a `Result`. If any step fails, the service short-circuits and 
 
 `ElementPlacementService` computes new Sort values entirely in memory:
 
-1. Load target siblings (zone-filtered for Sections)
+1. Load target siblings (`siblingSequence()`: zone-filtered for every page-root class, Sections and placements alike)
 2. Exclude the moved element from the sibling list
 3. Resolve insertion index from `afterElementId` (`null` means first position; missing reference sibling returns `Result::fail`)
 4. `array_splice()` the element into position
@@ -393,7 +393,7 @@ The boundary where SilverStripe's `ValidationException` becomes a domain `Result
 
 ### GridSettingsResolver
 
-Resolves the effective `ViewportConfig` for each active viewport from a `GridSettings` value object. The resolver applies the adapter's `OverrideStrategy`:
+Resolves the effective `ViewportConfig` for each active viewport from a `GridSettings` value object. The resolver applies its configured `OverrideStrategy` (a module setting, not the adapter's):
 
 - **Isolated** (default): each viewport gets the default config unless it has an explicit override entry.
 - **Cascade**: overrides carry forward to subsequent viewports in order, implementing mobile-first inheritance.
@@ -406,23 +406,29 @@ Hierarchy validation runs in two contexts with shared logic:
 
 ### Write-Time: HierarchyValidationExtension
 
-Applied globally to `GridElement` via YAML. Hooks into `updateValidate()` in the SilverStripe write lifecycle:
+Applied globally to `GridElement` via YAML. Hooks into `updateValidate()` in the SilverStripe write lifecycle and delegates to `HierarchyValidationService`, which applies `PlacementRulesTrait::checkPlacementRules()`:
 
-1. No parent (orphan) → pass
-2. Parent is `SiteTree` → check the element's `ContainerType::canBeRoot()`
-3. Parent is a container → check the parent's `ContainerType::isChildAllowed($element::class)`
+1. A shared-block placement anywhere inside a shared context → fail `SHARED_NESTING`
+2. The element's effective class (`getPlacementClass()` — a placement is judged by its block's root class) cannot be resolved → pass
+3. No parent (orphan) → pass
+4. Parent is `SiteTree` → check `ContainerType::canBeRoot()` on the effective class
+5. Parent is a `SharedBlock` → pass (any non-placement class may root a block)
+6. Parent is a container → check the parent's `ContainerType::isChildAllowed($effectiveClass)`
 
-Violations throw `ValidationException`, preventing the database write.
+Violations throw `ValidationException`, preventing the database write. See [Shared blocks — Validation](shared-blocks.md#validation) for why an unresolvable class passes here.
 
 ### Reorder-Time: ReorderValidator
 
-Called by `ElementPlacementService` before executing a placement — on both the `reorder()` (move existing element) and `insertAfter()` (place just-written element) paths, so newly-created and duplicated elements run the same checks. Applies the same hierarchy rules as the write-time extension but returns `Result::fail()` instead of throwing, maintaining the Result pattern contract.
+Called by `ElementPlacementService` before executing a placement — on both the `reorder()` (move existing element) and `insertAfter()` (place just-written element) paths, so newly-created and duplicated elements run the same checks. Returns `Result::fail()` instead of throwing, maintaining the Result pattern contract:
 
-Same-parent moves skip validation entirely — reordering within a container cannot violate hierarchy rules.
+1. A placement of a block with no root fails `BLOCK_EMPTY`
+2. Same-parent moves short-circuit to ok — reordering within a container cannot violate hierarchy rules
+3. Source and target shared contexts must match, else `SHARED_BOUNDARY` (a fresh, unparented element has no source context and skips this)
+4. Then the same `checkPlacementRules()` as the write-time extension
 
 ### Shared authority: `ContainerType`
 
-Both `HierarchyValidationService` (write-time) and `ReorderValidator` (reorder-time) delegate the actual allow/deny decision to the target parent's `ContainerType` enum — `canBeRoot()` for page-level placement and `isChildAllowed($element::class)` for container placement. There is a single source of truth for the rules and no separate allowance trait or config lookup.
+Both `HierarchyValidationService` (write-time) and `ReorderValidator` (reorder-time) delegate the actual allow/deny decision, through `PlacementRulesTrait`, to the `ContainerType` enum — `canBeRoot()` for page-level placement and the parent's `isChildAllowed()` for container placement, both asked about the element's effective class (`getPlacementClass()`), never `$element::class`. There is a single source of truth for the rules and no separate allowance trait or config lookup.
 
 ## Repository Layer
 
@@ -435,7 +441,7 @@ Both `HierarchyValidationService` (write-time) and `ReorderValidator` (reorder-t
 | `findByParentIds(list<int>, string $parentClass)` | Elements by ParentID + parent class |
 | `findByParents(array<class, list<int>>, ?zone)` | Composite key + optional zone filter |
 
-`OrmGridElementRepository` implements these against the SilverStripe ORM. All queries sort by `Sort ASC, ID ASC`. Zone filtering queries the `Section` table directly (the `Zone` column only exists there).
+`OrmGridElementRepository` implements these against the SilverStripe ORM. All queries sort by `Sort ASC, ID ASC`. `findByParents()` queries `GridElement` once per parent class; the `Zone` column lives on that base table, and the zone filter applies only to page-parented roots.
 
 ## Result Pattern
 
@@ -503,11 +509,13 @@ The constructor reads all config, builds Viewport objects, validates topology, a
 
 ### Override Strategy (Module Config)
 
-The override strategy is a module-level setting on `GridSettingsResolver`, not the adapter:
+The override strategy is a module-level setting on `GridSettingsResolver`, not the adapter — its `overrideStrategy` constructor argument (`isolated` by default, `_config/grid.yml`). Constructor specs merge with the module's definition, so a project overrides just that argument:
 
 ```yaml
-WeDevelop\Grid\Service\GridSettingsResolver:
-  override_strategy: cascade
+SilverStripe\Core\Injector\Injector:
+  WeDevelop\Grid\Service\GridSettingsResolver:
+    constructor:
+      overrideStrategy: cascade
 ```
 
 ### Adapters
@@ -517,7 +525,7 @@ WeDevelop\Grid\Service\GridSettingsResolver:
 | Bootstrap | xs, sm, md, lg, xl, xxl | xs (no infix) | `col-{vp}-{n}` |
 | Tailwind | base, sm, md, lg, xl, 2xl | base (no prefix) | `{vp}:col-span-{n}` |
 
-There is no compile-time default. `GridAdapterInterface` is bound through a factory that selects the active adapter from the **required** `SS_GRID_ADAPTER` env var — a bundled preset name (`bootstrap` or `tailwind`, case-insensitive) or the FQCN of a custom adapter implementing `GridAdapterInterface`. Unset, empty, or invalid values throw at container boot:
+There is no compile-time default. `GridAdapterInterface` is bound through a factory that selects the active adapter from the **required** `SS_GRID_ADAPTER` env var — a bundled preset name (`bootstrap` or `tailwind`, case-insensitive) or the FQCN of a custom adapter implementing both `GridAdapterInterface` and `ContentLayoutAdapterInterface` (subclassing `GridAdapter` satisfies both). Unset, empty, or invalid values throw at container boot:
 
 ```yaml
 SilverStripe\Core\Injector\Injector:
@@ -615,17 +623,17 @@ Pages (`SiteTree`) and grid elements live in separate DB tables with independent
 
 | Value | Shape | Role |
 |-------|-------|------|
-| `NodeType` | Enum: `page`, `section`, `row`, `column`, `element` | Discriminator. `fromClass()` resolves a FQCN to the right case; `toClass()` returns the canonical ORM class for lookup (with `element` → `GridElement`). |
+| `NodeType` | Enum: `page`, `section`, `row`, `column`, `element`, `sharedBlock` (a tree root only — the library editor) | Discriminator. `fromClass()` resolves a FQCN to the right case; `toClass()` returns the canonical ORM class for lookup (with `element` → `GridElement`). |
 | `NodeRef` | `final readonly { type: NodeType, id: positive-int }` | Scoped identity used on every API boundary — tree responses (`rootParent`), reorder payload (`element`, `parent`, `after`), duplicate-to targets, create parents. Serializes to `{ type, id }` via `JsonSerializable`. |
 
-Server and client use the same shape: the frontend `NodeKey` (`"${NodeType}-${id}"`) string form is produced client-side by `NodeIdentity.toKey()`. (The PHP `NodeRef::toKey()` counterpart has no caller and is deprecated for removal in 7.0.0.) The controller's `resolveNodeRef()` keeps only the Page branch and delegates every element ref to `GridElementRepositoryInterface::findByRef()` (which deliberately excludes Page), so the class-resolution that avoids the polymorphic ID collision lives in one place.
+Server and client use the same shape: the frontend `NodeKey` (`"${NodeType}-${id}"`) string form is produced client-side by `NodeIdentity.toKey()`. (The PHP `NodeRef::toKey()` counterpart has no caller and is deprecated for removal in 7.0.0.) The controller's `resolveNodeRef()` keeps only the Page and SharedBlock branches and delegates every element ref to `GridElementRepositoryInterface::findByRef()` (which deliberately excludes Page), so the class-resolution that avoids the polymorphic ID collision lives in one place.
 
 ## Value Objects
 
 | Class | Purpose |
 |-------|---------|
 | `ContainerType` | Enum: Section, Row, Column — with `toElementClass()`, `allowedChildClass()`, `isChildAllowed()` (instance) and `isChildCreatable()` (untrusted `class-string`, also proves it is a `GridElement` subclass) |
-| `NodeType` | Enum: Page, Section, Row, Column, Element — scoped identity discriminator (see [Node Identity](#node-identity)) |
+| `NodeType` | Enum: Page, Section, Row, Column, Element, SharedBlock — scoped identity discriminator (see [Node Identity](#node-identity)) |
 | `NodeRef` | `final readonly { type, id }` — canonical on-the-wire element reference |
 | `Viewport` | `final readonly class` with `key` and `label` |
 | `GridNode` | Readonly DTO for serialized tree nodes (includes `self: NodeRef`, `parent: NodeRef`, `status: ElementStatus`, `summary`, and optional `containerType`/`children`/`gridSettings`) |
@@ -670,7 +678,7 @@ WeDevelop\Grid\Service\ElementPlacementService:
 
 `GridPageExtension` is opt-in — consuming projects apply it to the page classes they want grid editing on (see the module README for setup). Applying it:
 
-- Declares `has_many` to Section (with `owns`, `cascade_deletes`, `cascade_duplicates`)
+- Declares `GridRoots` (`has_many` to `GridElement.Parent`, owned, cascade-deleted and cascade-duplicated) — every root class, Sections and shared-block placements — plus a non-owned `Sections` relation kept for `$Sections` in templates. A second owned relation on the same `.Parent` would make the reverse-owner lookup ambiguous; see [Shared blocks — Ownership](shared-blocks.md#ownership-and-publishing)
 - Adds a `UseGrid` boolean DB field (defaulting to `$use_grid_by_default`)
 - Removes the default `Content` field when the grid is active
 - Injects `GridEditorField` as the React mount point for the grid editor
@@ -698,7 +706,7 @@ A known limitation: archive cutoff is derived from the page version's `LastEdite
 
 When `silverstripe-fluent` is installed, `_config/fluent.yml` wires:
 
-- `FluentGridPageExtension` onto `SiteTree` — hooks `onAfterCopyLocale` and `onAfterLocalisedCopy` to duplicate the grid subtree on copy.
+- `FluentGridPageExtension` onto `SiteTree` — hooks `onAfterCopyLocale` and `onAfterLocalisedCopy` to duplicate the grid subtree on copy, and gives every shared block the copied page places a subtree in the target locale if it has none (`SharedBlockLocaliser::ensureLocalised()`).
 - `GridAwareDeleteLocalisationPolicy` as the Injector alias for `DeleteLocalisationPolicy` — wraps Fluent's original policy and additionally cascades grid element deletion when a locale is cleared.
 
 See `docs/fluent.md` for full setup.

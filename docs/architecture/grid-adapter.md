@@ -207,12 +207,16 @@ WeDevelop\Grid\Adapter\YourAdapter:
 
 ### 6. Override Strategy (Module Config)
 
-The override strategy (isolated vs cascade) is a module-level setting on `GridSettingsResolver`, not the adapter:
+The override strategy (isolated vs cascade) is a module-level setting on `GridSettingsResolver`, not the adapter: its `overrideStrategy` constructor argument, `isolated` by default (`_config/grid.yml`). Override just that argument — constructor specs merge with the module's definition:
 
 ```yaml
-WeDevelop\Grid\Service\GridSettingsResolver:
-  override_strategy: cascade
+SilverStripe\Core\Injector\Injector:
+  WeDevelop\Grid\Service\GridSettingsResolver:
+    constructor:
+      overrideStrategy: cascade
 ```
+
+The editor previews each viewport's stored settings and does not apply the cascade strategy, so on a cascade project the editor and the published page can differ for a viewport without an override.
 
 ## Content Layout
 

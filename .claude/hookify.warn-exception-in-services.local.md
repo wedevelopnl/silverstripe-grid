@@ -25,4 +25,4 @@ This project uses the Result pattern for domain validation in services:
 - **Expected validation failures** (invalid input, hierarchy violations, business rule violations) → `Result::fail()`
 - **Infrastructure failures** (database down, file I/O errors, impossible states) → exceptions are appropriate
 
-Check `ReorderService`, `ElementPersistenceService`, and `ReorderExecutor` for Result pattern examples.
+Check `GridElementService`, `ElementPlacementService`, `SharedBlockService` (src/Service) and `ReorderValidator` (src/Validation) for Result pattern examples. See the Result Pattern rules in CLAUDE.md.

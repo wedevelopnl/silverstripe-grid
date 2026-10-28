@@ -12,15 +12,11 @@ conditions:
     pattern: src/
 ---
 
-**SilverStripe DI Anti-Pattern Detected**
+**Service Locator Call — Prefer Injection**
 
-Do NOT use `Injector::inst()->get()` or `Injector::inst()->create()` — this is the service locator anti-pattern and produces untestable code.
+`Injector::inst()->get()` / `->create()` hides a dependency from the class signature and makes it harder to substitute in tests. Prefer the project's DI conventions (see the PHP Conventions in CLAUDE.md):
 
-**Use proper dependency injection instead:**
+- **Controllers/DataObjects**: `private static array $dependencies` property injection (SilverStripe instantiates these without DI args) — see `GridController` and `GridElement`.
+- **Services**: constructor injection with explicit YAML `constructor:` config — see `ElementPlacementService` wired in `_config/hierarchy.yml`.
 
-- **Controllers/DataObjects**: Use `private static array $dependencies` for property injection (SilverStripe instantiates these without DI args).
-- **Services**: Use constructor injection with explicit YAML `constructor:` config in `_config/*.yml`.
-
-See `ElementalGridController` for the `$dependencies` pattern and `ElementTreeBuilder` for constructor injection.
-
-The only justified instance is `ElementPersistenceService:72` (explained in its inline comment) and `HierarchyValidationExtension` (framework hook with no DI control).
+The locator is accepted where no DI hook exists, with a comment saying why: extensions (`HierarchyValidationExtension`), a `DBComposite` field (`DBGridSettings`), value objects (`WriteResult`), and `Injector::inst()->create($class)` to instantiate a class chosen at runtime (`GridElementService`). If this call is in a class that can take injected dependencies, inject instead.

@@ -69,28 +69,31 @@ The `fixtureMap` is typed `Record<className, Record<identifier, dbId>>` — use 
 
 ### `helpers/drag.ts` — Drag Simulation
 
-dnd-kit uses PointerSensor with an 8px activation threshold. The helpers simulate raw pointer events with timing delays for React reconciliation.
+dnd-kit uses PointerSensor with an 8px activation threshold. The helpers simulate raw pointer events and wait on conditions (DragOverlay visible/hidden, preview quiescence) where one exists.
 
 ```typescript
 // Full drag: activate → move to target → drop
 await performDrag(page, sourceLocator, targetLocator);
 
-// Granular control: activate drag, then position manually
-const handle = await activateDragByTitle(page, 'Row A1');
-// handle returns { x, y } center coordinates of the drag handle
-
-// Start drag with explicit control over drop
-const dragHandle = await startDrag(page, sourceLocator, targetLocator);
+// Start drag with explicit control over the release
+const drag = await startDrag(page, sourceLocator, targetLocator);
 // ... intermediate assertions while dragging ...
-await dropAndSettle(page, targetX, targetY);
+await drag.release();
 
-// Wait for mutation settlement (reorder API + refetch + 500ms for dnd-kit rect re-registration)
-const settle = waitForMutationSettlement(page);
-await dropAndSettle(page, x, y);
+// Granular control: activate drag, then position manually
+const origin = await activateDragByTitle(page, 'Row A1');
+// returns { x, y } center coordinates of the drag handle
+// ... enterContainerCenter / manual page.mouse.move ...
+// Final move + release + settlement in one call; `label` names the drop in failure messages
+await dropAndSettle(page, targetX, targetY, 'A1 before B1');
+
+// Settlement around a drop you release yourself (register BEFORE the release)
+const settle = waitForMutationSettlement(page, 'reorder within main');
+await drag.release();
 await settle();
 ```
 
-**Critical timing**: drag helpers include 150ms delays after activation and moves for React state batching + dnd-kit collision updates. The 500ms settlement pause after drop is necessary for TanStack Query cache update and dnd-kit droppable rect re-registration.
+**Critical timing**: activation waits for the DragOverlay to render; `startDrag` then pauses a bounded 150ms for collision detection to settle at the hover position. The 500ms pause inside the settle function (after the PATCH `/api/reorder` + GET `/api/readTree/` responses) is necessary for TanStack Query cache update and dnd-kit droppable rect re-registration. Full detail: the `dnd-guide` skill's `references/e2e-testing.md`.
 
 ## Test Selectors
 
@@ -135,7 +138,7 @@ await settle();
 | `getByTestId('add-content-button')` | Add content element |
 | `getByTestId('element-type-picker')` | Element type selection modal |
 | `getByTestId('element-type-picker-close')` | Modal close button |
-| `getByTestId('element-type-tile')` | Clickable element type option |
+| `getByTestId('element-type-option')` | Clickable element type option |
 
 ### Edit links
 
@@ -150,9 +153,10 @@ await settle();
 | Selector | Element |
 |----------|---------|
 | `getByTestId('drag-overlay-element')` | Element drag overlay |
+| `getByTestId('drag-overlay-section')` | Section drag overlay |
 | `getByTestId('drag-overlay-row')` | Row drag overlay |
 | `getByTestId('drag-overlay-column')` | Column drag overlay |
-| `getByTestId('drag-overlay-element-title')` | Title in drag overlay |
+| `getByTestId('drag-overlay-element-title')` | Title in drag overlay (`drag-overlay-{type}-title` per type) |
 
 ### Viewport & dialogs
 
@@ -207,13 +211,15 @@ Check `_config/dev.yml` for the current fixture list — it is the source of tru
 | `complex-page` | Mixed versioned states: published, draft-only, modified |
 | `multi-zone` | MultiZonePage with `main` and `sidebar` zones |
 | `media-elements` | Content with media/image elements |
-| `grid-settings` | Columns with various GridSettings configurations |
+| `viewport-cascade` / `mobile-column-width` | Columns whose GridSettings exercise per-viewport overrides |
+| `shared-blocks` | Library blocks placed on two pages |
+| `userform-element` | Form element — registered only in the optional-modules testbed (`grid-dev-userforms` block) |
 
 ### Creating a new fixture
 
 #### 1. Write the YAML file
 
-Create at `tests/E2E/Fixture/{Name}.yml`. Use top-down ordering — parents before children — so `=>ClassName.identifier` references resolve. Auto-scaffolding is suppressed during fixture loading (the loader sets `auto_scaffold: false`), so no duplicate children are created.
+Create at `tests/E2E/Fixture/{Name}.yml`. Use top-down ordering — parents before children — so `=>ClassName.identifier` references resolve. Auto-scaffolding is suppressed during fixture writes (`FixtureLoader.config_overrides` in `_config/dev.yml` sets `auto_scaffold: false` on `Section` and `Row`), so no duplicate children are created. Full protocol: `docs/testing/e2e-fixtures.md`.
 
 ```yaml
 Page:
@@ -239,7 +245,7 @@ WeDevelop\Grid\Model\Column:
     Title: 'Left Column'
     Sort: 1
     Parent: =>WeDevelop\Grid\Model\Row.row1
-    GridSettings: '{"md":{"width":8,"offset":0,"visible":true}}'
+    GridSettings: '{"default":{"width":8,"offset":0,"visible":true},"overrides":{}}'
 
 WeDevelop\Grid\Model\ContentElement:
   leaf1:
@@ -252,8 +258,8 @@ WeDevelop\Grid\Model\ContentElement:
 - Page URLSegments start with `e2e-` by convention; cleanup is by class (`FixtureLoader.purge_classes` in `_config/dev.yml`), not by prefix
 - Use fully qualified class names for model references
 - Polymorphic parent: `Parent: =>ClassName.identifier` (the fixture system resolves `ParentID` + `ParentClass`)
-- Sections carry a `Zone` field (e.g., `main`, `sidebar`)
-- GridSettings uses sparse JSON — only store viewport overrides, not all viewports
+- Every page-root element (a `Section`, or a `SharedBlockReference` placed at page root) needs a non-empty `Zone` (e.g., `main`, `sidebar`); elements below a page leave it empty — see the Zones rules in CLAUDE.md
+- GridSettings is `{"default": {...}, "overrides": {...}}`; `overrides` holds only the viewports that deviate from `default` (`{}` when none)
 
 #### 2. Register the fixture
 
@@ -304,23 +310,25 @@ Order matters — `publish_recursive` first, then `unpublish`/`modify` to create
 
 ## Multi-Zone Testing
 
-The `MultiZonePage` page type (dev-only) provides two zones: `main` and `sidebar`. Each zone renders its own `GridEditorField`.
+The `App\MultiZonePage` page type (harness-owned, `.docker/app/src/`) provides two zones: `main` and `sidebar`. Each zone renders its own `GridEditorField`.
 
 ```typescript
-// Target a specific zone's editor
-const mainEditor = page.getByTestId('grid-editor').filter({ has: page.locator('[data-zone="main"]') });
-const sidebarEditor = page.getByTestId('grid-editor').filter({ has: page.locator('[data-zone="sidebar"]') });
+// Target a specific zone's editor — data-zone sits on the grid-editor element itself
+const editors = page.getByTestId('grid-editor');
+const mainEditor = editors.and(page.locator('[data-zone="main"]'));
+const sidebarEditor = editors.and(page.locator('[data-zone="sidebar"]'));
 ```
 
 ## Authentication
 
-Global setup (`tests/E2E/global.setup.ts`) authenticates as `admin`/`admin` and stores session in `tests/E2E/.auth/admin.json`. All specs inherit this via Playwright's `storageState` — no per-spec login needed.
+Global setup (`tests/E2E/global.setup.ts`) authenticates as `admin`/`admin` and stores session in `tests/E2E/.auth/admin.json` (`admin-modules.json` for the optional-modules testbed). All specs inherit this via Playwright's `storageState` — no per-spec login needed.
 
 ## Execution Model
 
 - `workers: 1`, `fullyParallel: false` — specs run serially
-- `retries: 1` on first failure with trace capture
+- `retries: 2` in CI, `1` locally; trace captured on first retry
+- Chromium locally; Firefox projects are added only in CI
 - Self-signed certs: `ignoreHTTPSErrors: true`
-- Base URL from `E2E_BASE_URL` env var or parsed from `.docker/.env`
+- Base URL from `E2E_BASE_URL` env var or `WEB_PORT` in `.docker/.env`
 - Run specific spec: `npx playwright test specs/{file}`
 - Run full suite: `task test-e2e`

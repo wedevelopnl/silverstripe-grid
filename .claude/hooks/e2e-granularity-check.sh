@@ -4,7 +4,7 @@
 set -euo pipefail
 
 input="$(cat)"
-tool="$(echo "$input" | jq -r '.tool // empty')"
+tool="$(echo "$input" | jq -r '.tool_name // empty')"
 
 # Only check Write and Edit tools
 if [[ "$tool" != "Write" && "$tool" != "Edit" ]]; then
@@ -37,7 +37,7 @@ with multiple steps, not single operations. Consider:
 - Could this be better tested at the unit or integration level?
 - Should this be combined with related operations into a user journey spec?
 
-See the e2e-conventions instructions for the project's E2E testing philosophy.
+See the e2e-test-reference skill for the project's E2E testing conventions.
 EOF
   fi
 fi
