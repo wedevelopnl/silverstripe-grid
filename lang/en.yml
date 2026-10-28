@@ -206,7 +206,7 @@ en:
   WeDevelop\Grid\Service\SharedBlockService:
     ALREADY_SHARED: 'This element is already a shared block.'
     BLOCK_EMPTY: 'This shared block has no content to detach.'
-    LOCALE_PERMISSION: 'You can''t delete "{title}": it is also placed on pages in {locales}, which you may not edit. Ask someone who can edit every language this block is placed in.'
+    LOCALE_PERMISSION: 'You can''t delete "{title}": it also has content or placements in {locales}, which you may not edit. Ask someone who can edit every language this block is in.'
     NESTED_PLACEMENT: 'This content holds a shared block, which cannot be nested inside another one.'
     UNSHARE_EMPTY_BLOCK: 'This block has no content left to keep. Delete it and remove the placements instead.'
     NOT_PLACED: 'Only an element that sits on a page can be shared.'
