@@ -7,13 +7,13 @@ applyTo: "**/*.php"
 
 ## SilverStripe Dependency Injection
 
-- **Property injection via `$dependencies`**: Controllers (`AdminController` subclasses) and Elements (`DataObject` subclasses) cannot use constructor injection — the framework instantiates them without DI args. Use `private static array $dependencies` for property injection instead. See `GridController` and `Section`/`Row`/`Column` for examples.
+- **Property injection via `$dependencies`**: Controllers (`AdminController` subclasses) and Elements (`DataObject` subclasses) cannot use constructor injection — the framework instantiates them without DI args. Use `private static array $dependencies` for property injection instead. See `GridController`, `GridElement` and `Column` for examples. Extensions get no `$dependencies` either: resolve with `Injector::inst()->get()` in the method, with a comment saying why.
 - **Injector constructor wiring**: Injector does NOT auto-wire constructor params from YAML interface bindings. Services with constructor injection need explicit `constructor:` config in YAML (see `_config/hierarchy.yml`).
 
 ## Result Pattern
 
-- Service-layer validation returns `Result` objects via `Result::ok($value)` / `Result::fail($errors)` — never throws for expected validation failures.
-- Used in `ElementPlacementService`, `GridElementService`, `GridSettingsService`, `WriteResult`, and controller response flows.
+- Service-layer validation returns `Result` objects via `Result::ok($value)` / `Result::fail(ValidationError $first, ValidationError ...$rest)` (spread a list: `Result::fail(...$other->errors())`) — never throws for expected validation failures.
+- Used in `ElementPlacementService`, `GridElementService`, `GridSettingsService`, `SharedBlockService`, `ReorderValidator`, `HierarchyValidationService`, `WriteResult`, and controller response flows.
 - Check with `$result->isOk()` / `$result->isErr()`, access value via `$result->unwrap()`, errors via `$result->errors()`.
 
 ## PHPStan
