@@ -69,7 +69,7 @@ This is handled by `FluentGridPageExtension` (applied to SiteTree), `FluentShare
 
 ## Important Warning
 
-Do **NOT** configure `apply_isolated_locales_to_admin: false` under `WeDevelop\Grid\Model\GridElement` in YAML. That Fluent setting disables locale filtering in the CMS admin, which would cause all locales' grid elements to appear together and break the tree structure.
+Setting `apply_isolated_locales_to_admin: false` or `apply_isolated_locales_to_byid: false` on `WeDevelop\Grid\Model\GridElement` is **not supported**. Either one switches off Fluent's locale filter for queries outside the front end (all queries, or those by ID), and every grid operation in the CMS and in tasks relies on that filter to see one locale's elements: the editor tree mixes every locale's elements, and an operation that visits each locale in turn (deleting a shared block, copying to a locale) handles the same rows once per locale.
 
 ## Migrating Elemental content under Fluent
 
