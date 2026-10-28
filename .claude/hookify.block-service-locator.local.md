@@ -4,7 +4,7 @@ enabled: true
 event: file
 action: warn
 conditions:
-  - field: new_text
+  - field: content
     operator: regex_match
     pattern: Injector::inst\(\)->(get|create)\(
   - field: file_path
@@ -14,9 +14,13 @@ conditions:
 
 **Service Locator Call — Prefer Injection**
 
-`Injector::inst()->get()` / `->create()` hides a dependency from the class signature and makes it harder to substitute in tests. Prefer the project's DI conventions (see the PHP Conventions in CLAUDE.md):
+`Injector::inst()->get()` / `->create()` hides a dependency from the class signature and makes it harder to substitute in tests. Inject instead, following the SilverStripe Dependency Injection rules in CLAUDE.md (PHP Conventions).
 
-- **Controllers/DataObjects**: `private static array $dependencies` property injection (SilverStripe instantiates these without DI args) — see `GridController` and `GridElement`.
-- **Services**: constructor injection with explicit YAML `constructor:` config — see `ElementPlacementService` wired in `_config/hierarchy.yml`.
+The locator is accepted only where injection is impossible or deliberately avoided, with a comment saying why:
 
-The locator is accepted where no DI hook exists, with a comment saying why: extensions (`HierarchyValidationExtension`), a `DBComposite` field (`DBGridSettings`), value objects (`WriteResult`), and `Injector::inst()->create($class)` to instantiate a class chosen at runtime (`GridElementService`). If this call is in a class that can take injected dependencies, inject instead.
+- extensions, which the framework instantiates without DI args (`HierarchyValidationExtension`, `MediaExtension`);
+- a `DBComposite` field (`DBGridSettings`) and value objects (`WriteResult`);
+- a dependency resolved lazily on purpose (`SharedBlockLocaliser::cloner()` — its constructor wiring exists only in the Fluent-gated config);
+- `Injector::inst()->create($class)` for a class chosen at runtime (`GridElementService`).
+
+If this call is in a class that can take injected dependencies, inject instead.

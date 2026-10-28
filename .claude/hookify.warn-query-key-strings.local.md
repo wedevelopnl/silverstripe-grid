@@ -4,9 +4,9 @@ enabled: true
 event: file
 action: warn
 conditions:
-  - field: new_text
+  - field: content
     operator: regex_match
-    pattern: (invalidateQueries|setQueryData|getQueryData|removeQueries|cancelQueries)\(\s*(\{|\[)\s*['"]
+    pattern: (invalidateQueries|refetchQueries|setQueryData|getQueryData|removeQueries|cancelQueries)\(\s*(\{\s*queryKey:\s*)?\[\s*['"]
   - field: file_path
     operator: regex_match
     pattern: client/src/.*\.(ts|tsx)$
@@ -29,4 +29,4 @@ queryClient.invalidateQueries({ queryKey: queryKeys.sharedBlocks.all() });
 queryClient.invalidateQueries({ queryKey: ['elementTree', pageId, zone] });
 ```
 
-See `client/src/js/hooks/queryKeys.ts` for all available key factories. Anything touching an editor tree goes through `treeQueryKey(root)`, never `queryKeys.elementTree` directly — the library editor renders `sharedBlocks.tree`.
+See `client/src/js/hooks/queryKeys.ts` for all available key factories. The editor's own tree goes through `treeQueryKey(root)`, never `queryKeys.elementTree` directly — the library editor renders `sharedBlocks.tree`. `queryKeys.elementTree.byPage()` directly is only for ANOTHER page's tree (the duplicate-to target in `useElementMutations.ts`).
