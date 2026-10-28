@@ -515,8 +515,8 @@ class GridElement extends DataObject
     {
         // A block owns exactly one subtree, and this element IS that subtree.
         // Removing it leaves a block that resolves no effective root class:
-        // every page placing it renders nothing, and later grid writes on those
-        // pages fail with BLOCK_EMPTY. The block is removed as a whole instead
+        // every page placing it renders nothing, and placing, moving or
+        // detaching it fails with BLOCK_EMPTY. The block is removed as a whole instead
         // ({@see \WeDevelop\Grid\Forms\SharedBlockItemRequest}),
         // which is why this sits ABOVE extendedCan — it is a structural
         // invariant, not a permission an extension may grant.

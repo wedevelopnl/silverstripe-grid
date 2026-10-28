@@ -4,6 +4,8 @@ namespace TractorCow\Fluent\Model;
 
 class Locale
 {
+    public const string CMS_ACCESS_MULTI_LOCALE = 'Fluent_Actions_MultiLocale';
+
     /** @var non-empty-string */
     public string $Locale;
 

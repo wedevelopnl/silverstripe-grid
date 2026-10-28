@@ -140,6 +140,7 @@ Shared blocks follow the same model as the rest of the module — no second loca
 - **Copying a block** to a locale clones its subtree into that locale.
 - A placement whose block has no content in the current locale renders empty.
 - **Deleting a locale** removes that locale's block subtrees and that locale's placements. The block record itself survives.
+- **Deleting the block** acts on every locale, whichever one you are working in — see [Deleting a block](#deleting-a-block).
 
 See [Fluent support](../fluent.md) for installing and configuring Fluent.
 
@@ -154,16 +155,19 @@ See [Fluent support](../fluent.md) for installing and configuring Fluent.
 
 ![The block edit form's "More options" menu open, showing the two delete actions side by side: "Delete and remove from 1 page" and "Delete and keep a copy on each page"](../images/shared-block-delete.png)
 
-The label counts the pages placing the block, and the CMS asks for confirmation before either fires. Both reach live immediately, on every consuming page at once, without those pages being republished — the same reach as unpublishing the block.
+The label counts the pages placing the block, in any language — a page placing it in two languages counts once — and the CMS asks for confirmation before either fires. Both reach live immediately, on every consuming page at once, without those pages being republished — the same reach as unpublishing the block. Each consuming page gets a new draft version recording the change, so its history shows it.
+
+On a multilingual site the block is one record for the whole site, so deleting it acts on **every language**, whichever one you are working in. "Remove" takes the block off every page in every language and leaves nothing behind; "keep a copy" gives each page, in each language, a copy of *that* language's content — nothing is copied from one language into another — published where that language's placement was published. If anything fails part-way, nothing changes in any language.
 
 The **Usage** tab of the block's edit form lists the consuming pages, and the **Shared blocks** report shows usage across the site.
 
 Deleting the block is the *only* way to remove its content: the root element of a block carries no **Archive** and no **Duplicate**, because a block without a root renders nothing on every page that places it, and a block with two roots hides one of them. Everything below the root is freely archived and duplicated as usual.
 
-Three things worth knowing:
+Four things worth knowing:
 
 - **An unplaced block shows a single Delete block** — there is nothing to decide, so no choice is offered.
-- **A block with no content left cannot be kept.** "Delete and keep a copy on each page" needs something to copy; a block emptied outside the CMS — by a migration or a dev task — refuses that choice, and you have to remove the placements instead.
+- **A block with no content left cannot be kept.** "Delete and keep a copy on each page" needs something to copy; a block emptied outside the CMS — by a migration or a dev task — refuses that choice, and you have to remove the placements instead. On a multilingual site that refusal needs the block to be empty in every language that places it; a language that places it without content just loses those placements, which showed nothing anyway.
+- **Editors restricted to some languages cannot delete a block placed in others.** The delete writes into every language that places the block, so it needs Fluent's permission to act across languages, or edit access in each of those languages. Otherwise nothing is deleted and the form names the languages you may not edit.
 - **The copies are made from the block's draft content.** If the block had unpublished changes, unsharing publishes them onto the pages that were showing the older version. Publish the block first if that matters.
 
 Deleting a *placement* is a different operation entirely: it removes that page's reference and leaves the block untouched. **Detach** goes one step further, replacing the placement with a local copy on that page alone.

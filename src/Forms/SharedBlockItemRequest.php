@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace WeDevelop\Grid\Forms;
 
 use Override;
-use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Control\HTTPResponse;
 use SilverStripe\Core\Validation\ValidationException;
 use SilverStripe\Forms\FieldList;
@@ -13,7 +12,6 @@ use SilverStripe\Forms\Form;
 use SilverStripe\Forms\FormAction;
 use SilverStripe\Forms\Tab;
 use SilverStripe\ORM\DataObject;
-use SilverStripe\Versioned\Versioned;
 use SilverStripe\Versioned\VersionedGridFieldItemRequest;
 use WeDevelop\Grid\Model\SharedBlock;
 use WeDevelop\Grid\Service\SharedBlockService;
@@ -194,8 +192,9 @@ class SharedBlockItemRequest extends VersionedGridFieldItemRequest
     }
 
     /**
-     * @throws ValidationException When the mode cannot be honoured — unsharing
-     * a block whose content is gone leaves the pages nothing to copy.
+     * @throws ValidationException When the delete is refused — unsharing a
+     * block whose content is gone leaves the pages nothing to copy, and a
+     * member restricted to some locales may not reach the others through it.
      */
     private function deleteBlock(SharedBlockDeleteMode $mode, Form $form): HTTPResponse
     {
@@ -211,10 +210,9 @@ class SharedBlockItemRequest extends VersionedGridFieldItemRequest
 
         $title = (string) $record->Title;
 
-        // Resolved before the delete, which is what removes the placements the
-        // page list is derived from.
-        $pages = $this->usageResolver->pagesUsing($record);
-
+        // The service owns the whole operation, every locale and the consuming
+        // pages' new draft versions included; all that is left here is turning
+        // its Result into a response.
         $result = $this->sharedBlockService->delete($record, $mode);
 
         if ($result->isErr()) {
@@ -222,14 +220,6 @@ class SharedBlockItemRequest extends VersionedGridFieldItemRequest
                 static fn (ValidationError $error): string => $error->translate(),
                 $result->errors(),
             )));
-        }
-
-        // The consuming pages now render something else, so each needs a draft
-        // version recording that — the delete itself writes only the block.
-        foreach ($pages as $page) {
-            if ($page instanceof SiteTree) {
-                $page->writeToStage(Versioned::DRAFT);
-            }
         }
 
         $message = _t(
