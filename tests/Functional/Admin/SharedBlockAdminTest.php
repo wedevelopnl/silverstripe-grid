@@ -276,8 +276,8 @@ final class SharedBlockAdminTest extends FunctionalTest
     /**
      * The primary action leads the toolbar, as it does in every stock
      * ModelAdmin. Fragments concatenate in component order, so simply appending
-     * the replacement lands it last in the row — behind Export, Print and
-     * Import — which is why it is inserted at the stock button's position
+     * the replacement lands it last in the row — behind Export and
+     * Print — which is why it is inserted at the stock button's position
      * before that button is removed.
      */
     public function testAddControlLeadsTheListingToolbar(): void
@@ -294,6 +294,20 @@ final class SharedBlockAdminTest extends FunctionalTest
             $addPosition,
             'the add control must render ahead of the export button, which is the first of the stock toolbar buttons',
         );
+    }
+
+    /**
+     * The stock CSV import is a second way to create and delete blocks.
+     * "Replace data" deletes every block in the library, past the delete mode
+     * and the per-locale permission check, and an imported row is a block with
+     * no root. Asserted on the served markup: the upload itself cannot be
+     * replayed here, as FileField rejects anything is_uploaded_file() did not see.
+     */
+    public function testTheLibraryOffersNoCsvImport(): void
+    {
+        $body = (string) $this->visit('admin/shared-blocks')->getBody();
+
+        self::assertStringNotContainsString('Form_ImportForm', $body);
     }
 
     public function testNoAddControlForAMemberWhoMayNotCreateBlocks(): void
