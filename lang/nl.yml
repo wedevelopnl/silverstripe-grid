@@ -206,7 +206,7 @@ nl:
   WeDevelop\Grid\Service\SharedBlockService:
     ALREADY_SHARED: 'Dit element is al een gedeeld blok.'
     BLOCK_EMPTY: 'Dit gedeelde blok heeft geen inhoud om los te koppelen.'
-    LOCALE_PERMISSION: 'Je kunt "{title}" niet verwijderen: het blok staat ook op pagina''s in {locales}, die je niet mag bewerken. Vraag iemand die elke taal mag bewerken waarin dit blok staat.'
+    LOCALE_PERMISSION: 'Je kunt "{title}" niet verwijderen: het blok heeft ook inhoud of plaatsingen in {locales}, die je niet mag bewerken. Vraag iemand die elke taal mag bewerken waarin dit blok voorkomt.'
     NESTED_PLACEMENT: 'Deze inhoud bevat een gedeeld blok en kan daarom niet in een ander gedeeld blok worden geplaatst.'
     NOT_PLACED: 'Alleen een element dat op een pagina staat kan gedeeld worden.'
     UNSHARE_EMPTY_BLOCK: 'Dit blok heeft geen inhoud meer om te behouden. Verwijder het blok en haal de plaatsingen weg.'

@@ -45,7 +45,7 @@ use WeDevelop\Grid\Value\WriteResult;
  * @phpstan-type LocaleUsage array{
  *     locale: Locale|null,
  *     references: list<SharedBlockReference>,
- *     placed: bool,
+ *     held: bool,
  *     root: GridElement|null,
  *     pages: list<SiteTree>,
  *     mayDelete: bool,
@@ -408,6 +408,10 @@ class SharedBlockService
      * the change, in each of its locales, inside the same transaction: a
      * failure anywhere leaves block, placements and pages as they were.
      *
+     * Reaching every locale is also why a member restricted to some locales is
+     * refused, before anything is written, unless they may delete the block in
+     * each locale holding a placement or block content of it.
+     *
      * @return Result<int<0, max>> Placements handled, across every locale.
      */
     #[NoDiscard('The Result carries the number of placements handled or the reason the delete was refused.')]
@@ -466,11 +470,22 @@ class SharedBlockService
                 }
             }
 
-            $placed = $references !== [] || Versioned::withVersionedMode(static function () use ($blockId): bool {
-                Versioned::set_stage(Versioned::LIVE);
+            $root = $block->getRootElement();
 
-                return SharedBlockReference::get()->filter(['BlockID' => $blockId])->exists();
-            });
+            // Both modes delete this locale's placements and its block content,
+            // so either one, on either stage, makes the locale one the delete
+            // writes into.
+            $held = $references !== [] || $root !== null || Versioned::withVersionedMode(
+                static function () use ($blockId): bool {
+                    Versioned::set_stage(Versioned::LIVE);
+
+                    return SharedBlockReference::get()->filter(['BlockID' => $blockId])->exists()
+                        || GridElement::get()->filter([
+                            'ParentID' => $blockId,
+                            'ParentClass' => SharedBlock::class,
+                        ])->exists();
+                },
+            );
 
             // Fluent drops a locale-restricted group from the member while
             // another locale is active, and Permission caches per member, so
@@ -480,8 +495,8 @@ class SharedBlockService
             return [
                 'locale' => $locale,
                 'references' => $references,
-                'placed' => $placed,
-                'root' => $block->getRootElement(),
+                'held' => $held,
+                'root' => $root,
                 'pages' => array_values($pages),
                 'mayDelete' => $locale === null || $block->canDelete(),
             ];
@@ -489,10 +504,11 @@ class SharedBlockService
     }
 
     /**
-     * The delete writes into every locale holding a placement, so a member
-     * restricted to some locales would otherwise reach the others through it.
-     * They need Fluent's multi-locale permission, or the right to delete the
-     * block with each locale concerned active.
+     * The delete writes into every locale holding a placement or block
+     * content, so a member restricted to some locales would otherwise reach the
+     * others through it — a translation not placed anywhere yet included. They
+     * need Fluent's multi-locale permission, or the right to delete the block
+     * with each locale concerned active.
      *
      * Without a member (a task, project code outside a request) there is no
      * editor whose locales could be restricted: the call goes through, as a
@@ -518,7 +534,7 @@ class SharedBlockService
         $denied = [];
 
         foreach ($usage as $locale) {
-            if ($locale['placed'] && !$locale['mayDelete'] && $locale['locale'] !== null) {
+            if ($locale['held'] && !$locale['mayDelete'] && $locale['locale'] !== null) {
                 $denied[] = $locale['locale']->Title;
             }
         }
@@ -528,8 +544,8 @@ class SharedBlockService
         }
 
         return new ValidationError(
-            message: 'You can\'t delete "{title}": it is also placed on pages in {locales}, which you may not edit.'
-                . ' Ask someone who can edit every language this block is placed in.',
+            message: 'You can\'t delete "{title}": it also has content or placements in {locales},'
+                . ' which you may not edit. Ask someone who can edit every language this block is in.',
             key: self::class . '.LOCALE_PERMISSION',
             params: ['title' => (string) $block->Title, 'locales' => implode(', ', $denied)],
         );

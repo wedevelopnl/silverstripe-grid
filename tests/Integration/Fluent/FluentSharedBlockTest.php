@@ -6,6 +6,7 @@ namespace WeDevelop\Grid\Tests\Integration\Fluent;
 
 use Page;
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Versioned\Versioned;
 use TractorCow\Fluent\Model\Locale;
@@ -39,6 +40,9 @@ use WeDevelop\Grid\Value\SharedBlockDeleteMode;
 #[CoversClass(SharedBlock::class)]
 final class FluentSharedBlockTest extends FluentGridTestCase
 {
+    private const string DUTCH_REFUSAL = 'You can\'t delete "Opening hours": it also has content or placements in Dutch,'
+        . ' which you may not edit. Ask someone who can edit every language this block is in.';
+
     /** A block with a Section > Row > Column > leaf subtree in the active locale. */
     private function populatedBlock(string $title = 'Shared banner'): SharedBlock
     {
@@ -690,11 +694,7 @@ final class FluentSharedBlockTest extends FluentGridTestCase
         $result = Injector::inst()->get(SharedBlockService::class)->delete($block, SharedBlockDeleteMode::Remove);
 
         self::assertTrue($result->isErr(), 'the delete would write into Dutch, which this member may not edit');
-        self::assertSame(
-            'You can\'t delete "Opening hours": it is also placed on pages in Dutch, which you may not edit.'
-                . ' Ask someone who can edit every language this block is placed in.',
-            $result->errors()[0]->translate(),
-        );
+        self::assertSame(self::DUTCH_REFUSAL, $result->errors()[0]->translate());
         self::assertNotNull(SharedBlock::get()->byID($block->ID), 'nothing was deleted');
         self::assertSame(1, $this->inLocale('nl_NL', fn (): int => $this->placementCount($block)));
         self::assertSame(1, $this->placementCount($block));
@@ -710,6 +710,72 @@ final class FluentSharedBlockTest extends FluentGridTestCase
 
         self::assertTrue($result->isOk());
         self::assertSame(0, $this->inLocale('nl_NL', fn (): int => $this->placementCount($block)));
+    }
+
+    /** "Opening hours" placed on "Contact" in English only, with a Dutch translation of its content. */
+    private function blockPlacedInEnglishTranslatedIntoDutch(): SharedBlock
+    {
+        $block = $this->populatedBlock('Opening hours');
+        GridTreeFactory::reference($this->createPage('Contact'), $block, zone: 'main');
+        CopyToLocaleService::singleton()->copyToLocale(SharedBlock::class, (int) $block->ID, 'en_US', 'nl_NL');
+
+        return $block;
+    }
+
+    /** @return iterable<string, array{SharedBlockDeleteMode}> */
+    public static function deleteModes(): iterable
+    {
+        yield 'keep a copy' => [SharedBlockDeleteMode::Unshare];
+        yield 'remove' => [SharedBlockDeleteMode::Remove];
+    }
+
+    #[DataProvider('deleteModes')]
+    public function testAMemberRestrictedToOneLocaleCannotDeleteABlockWithContentInAnother(
+        SharedBlockDeleteMode $mode,
+    ): void {
+        // Both modes delete every locale's block content, a translation not
+        // placed anywhere yet included.
+        $block = $this->blockPlacedInEnglishTranslatedIntoDutch();
+
+        $this->logInWithPermission(['CMS_ACCESS_CMSMain', 'Fluent_Locale_en_US']);
+
+        $result = Injector::inst()->get(SharedBlockService::class)->delete($block, $mode);
+
+        self::assertTrue($result->isErr(), 'the delete would remove the Dutch content, which this member may not edit');
+        self::assertSame(self::DUTCH_REFUSAL, $result->errors()[0]->translate());
+        self::assertNotNull(SharedBlock::get()->byID($block->ID), 'nothing was deleted');
+        self::assertSame(1, $this->inLocale('nl_NL', fn (): int => $this->rootCount($block)));
+        self::assertSame(1, $this->rootCount($block));
+        self::assertSame(1, $this->placementCount($block));
+    }
+
+    #[DataProvider('deleteModes')]
+    public function testTheMultiLocaleActionPermissionAllowsDeletingContentInAnotherLocale(
+        SharedBlockDeleteMode $mode,
+    ): void {
+        $block = $this->blockPlacedInEnglishTranslatedIntoDutch();
+
+        $this->logInWithPermission(['CMS_ACCESS_CMSMain', 'Fluent_Locale_en_US', 'Fluent_Actions_MultiLocale']);
+
+        $result = Injector::inst()->get(SharedBlockService::class)->delete($block, $mode);
+
+        self::assertTrue($result->isOk());
+        self::assertSame(0, $this->inLocale('nl_NL', fn (): int => $this->rootCount($block)));
+    }
+
+    #[DataProvider('deleteModes')]
+    public function testAMemberRestrictedToOneLocaleDeletesABlockThatExistsOnlyInThatLocale(
+        SharedBlockDeleteMode $mode,
+    ): void {
+        $block = $this->populatedBlock('Opening hours');
+        GridTreeFactory::reference($this->createPage('Contact'), $block, zone: 'main');
+
+        $this->logInWithPermission(['CMS_ACCESS_CMSMain', 'Fluent_Locale_en_US']);
+
+        $result = Injector::inst()->get(SharedBlockService::class)->delete($block, $mode);
+
+        self::assertTrue($result->isOk(), 'Dutch holds nothing of the block, so the delete stays in English');
+        self::assertNull(SharedBlock::get()->byID($block->ID));
     }
 
     public function testADeleteWithoutAMemberIsNotLocaleRestricted(): void
