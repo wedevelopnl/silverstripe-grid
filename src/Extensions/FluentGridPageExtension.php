@@ -27,7 +27,8 @@ use WeDevelop\Grid\Service\SharedBlockLocaliser;
  * - CMS "Copy to other locales" button fires onAfterLocalisedCopy() with detected source
  *
  * Only activates when FluentIsolatedExtension is applied to GridElement and
- * the target locale has no Sections yet (prevents double-copy on re-saves).
+ * the page has no root elements (Sections or shared-block placements) in the
+ * target locale yet (prevents double-copy on re-saves).
  *
  * @extends Extension<SiteTree>
  */
