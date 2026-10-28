@@ -157,7 +157,7 @@ See [Fluent support](../fluent.md) for installing and configuring Fluent.
 
 The label counts the pages placing the block, in any language — a page placing it in two languages counts once — and the CMS asks for confirmation before either fires. Both reach live immediately, on every consuming page at once, without those pages being republished — the same reach as unpublishing the block. Each consuming page gets a new draft version recording the change, so its history shows it.
 
-On a multilingual site the block is one record for the whole site, so deleting it acts on **every language**, whichever one you are working in. "Remove" takes the block off every page in every language and leaves nothing behind; "keep a copy" gives each page, in each language, a copy of *that* language's content — nothing is copied from one language into another — published where that language's placement was published. If anything fails part-way, nothing changes in any language.
+On a multilingual site the block is one record for the whole site, so deleting it acts on **every language**, whichever one you are working in. "Remove" takes the block off every page in every language and leaves nothing behind; "keep a copy" gives each page, in each language, a copy of *that* language's content — nothing is copied from one language into another — published where that language's placement was published. A placement already removed from a page's draft but still published keeps showing visitors the content until the page is next published, as it would have without the delete. If anything fails part-way, nothing changes in any language.
 
 The **Usage** tab of the block's edit form lists the consuming pages, and the **Shared blocks** report shows usage across the site.
 

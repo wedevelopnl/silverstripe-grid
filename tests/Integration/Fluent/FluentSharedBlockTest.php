@@ -623,6 +623,29 @@ final class FluentSharedBlockTest extends FluentGridTestCase
         }
     }
 
+    public function testKeepingTheContentKeepsAnotherLocalesLiveOnlyPlacementOnLive(): void
+    {
+        ['block' => $block, 'page' => $page] = $this->blockPublishedInBothLocales();
+
+        // Dutch removed the placement on draft and has not published that.
+        $this->inLocale('nl_NL', static function () use ($block): void {
+            SharedBlockReference::get()->filter(['BlockID' => $block->ID])->first()?->deleteFromStage(Versioned::DRAFT);
+        });
+
+        $result = Injector::inst()->get(SharedBlockService::class)->delete($block, SharedBlockDeleteMode::Unshare);
+
+        self::assertTrue($result->isOk(), 'the delete must succeed');
+
+        $titles = fn (string $locale, string $stage): array => $this->inLocale(
+            $locale,
+            fn (): array => $this->onStage($stage, fn (): array => $this->pageLeafTitles($page)),
+        );
+
+        self::assertSame([], $titles('nl_NL', Versioned::DRAFT), 'the Dutch draft keeps the removal');
+        self::assertSame(['Gedeelde tekst'], $titles('nl_NL', Versioned::LIVE), 'Dutch visitors still see their wording');
+        self::assertSame(['Shared leaf'], $titles('en_US', Versioned::LIVE), 'English is kept as before');
+    }
+
     public function testRemovingTheBlockLeavesNothingInAnyLocale(): void
     {
         ['block' => $block, 'page' => $page] = $this->blockPublishedInBothLocales();

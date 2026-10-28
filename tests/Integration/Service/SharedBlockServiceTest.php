@@ -630,6 +630,48 @@ final class SharedBlockServiceTest extends SapphireTest
         self::assertSame('Shared leaf', ContentElement::get()->filter(['Title' => 'Shared leaf'])->first()?->Title);
     }
 
+    public function testDeleteInUnshareModeKeepsALiveOnlyPlacementsContentOnLiveUntilThePageIsPublished(): void
+    {
+        // The placement's draft row is gone (its page's draft was cleared
+        // without unpublishing), so the editor has removed it but not yet
+        // published that. Visitors still see the block until they do.
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $block = $this->sectionRootedBlock();
+        $reference = GridTreeFactory::reference($page, $block, zone: 'main');
+        self::assertTrue($this->service->setPublished($block, true)->isOk());
+        $page->publishRecursive();
+        $reference->deleteFromStage(Versioned::DRAFT);
+
+        self::assertTrue($this->service->delete($block, SharedBlockDeleteMode::Unshare)->isOk());
+
+        $pageRoots = ['ParentID' => $page->ID, 'ParentClass' => $page::class];
+        self::assertSame(0, Section::get()->filter($pageRoots)->count(), 'the draft keeps the removal');
+
+        $liveLeafTitles = fn (): array => $this->onLive(static fn (): array => array_map(
+            static fn (Section $section): array => $section->Rows()->first()?->getChildren()->first()
+                ?->getChildren()->column('Title') ?? [],
+            Section::get()->filter($pageRoots)->toArray(),
+        ));
+        self::assertSame([['Shared leaf']], $liveLeafTitles(), 'visitors still see the content');
+
+        Page::get()->byID($page->ID)?->publishRecursive();
+        self::assertSame([], $liveLeafTitles(), 'publishing the page publishes the removal');
+    }
+
+    /**
+     * @template T
+     * @param callable(): T $read
+     * @return T
+     */
+    private function onLive(callable $read): mixed
+    {
+        return Versioned::withVersionedMode(static function () use ($read): mixed {
+            Versioned::set_stage(Versioned::LIVE);
+
+            return $read();
+        });
+    }
+
     public function testDeleteInUnshareModeLeavesADraftOnlyPlacementUnpublished(): void
     {
         $page = $this->objFromFixture(Page::class, 'test_page');

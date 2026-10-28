@@ -45,6 +45,7 @@ use WeDevelop\Grid\Value\WriteResult;
  * @phpstan-type LocaleUsage array{
  *     locale: Locale|null,
  *     references: list<SharedBlockReference>,
+ *     liveOnly: list<SharedBlockReference>,
  *     held: bool,
  *     root: GridElement|null,
  *     pages: list<SiteTree>,
@@ -341,7 +342,17 @@ class SharedBlockService
      */
     private function replaceWithCopy(SharedBlockReference $reference, GridElement $root): GridElement
     {
-        $copy = $this->withoutScaffolding(static function () use ($reference, $root): GridElement {
+        $copy = $this->copyInPlaceOf($reference, $root);
+
+        $reference->doArchive();
+
+        return $copy;
+    }
+
+    /** A draft copy of $root, standing where $reference stands. */
+    private function copyInPlaceOf(SharedBlockReference $reference, GridElement $root): GridElement
+    {
+        return $this->withoutScaffolding(static function () use ($reference, $root): GridElement {
             // cascade_duplicates carries the whole subtree; the copy comes
             // back still pointing at the block, so re-point it immediately.
             $copy = $root->duplicate(true);
@@ -358,10 +369,6 @@ class SharedBlockService
 
             return $copy;
         });
-
-        $reference->doArchive();
-
-        return $copy;
     }
 
     /**
@@ -431,8 +438,9 @@ class SharedBlockService
                 }
 
                 // Placements the unshare path did not consume — all of them in
-                // Remove mode, those of a locale without content, and any
-                // live-only stragglers — go with the block, in every locale:
+                // Remove mode, those of a locale without content, and the live
+                // rows of live-only ones, now standing in for by a live copy —
+                // go with the block, in every locale:
                 // SharedBlock::onBeforeDelete() cleans them up.
                 $block->doArchive();
 
@@ -458,6 +466,15 @@ class SharedBlockService
         return $this->locales->each(static function (?Locale $locale) use ($block, $blockId): array {
             /** @var list<SharedBlockReference> $references */
             $references = SharedBlockReference::get()->filter(['BlockID' => $blockId])->toArray();
+            $draftIds = array_map(static fn (SharedBlockReference $reference): int => (int) $reference->ID, $references);
+
+            /** @var list<SharedBlockReference> $liveOnly */
+            $liveOnly = Versioned::withVersionedMode(static function () use ($blockId, $draftIds): array {
+                Versioned::set_stage(Versioned::LIVE);
+                $live = SharedBlockReference::get()->filter(['BlockID' => $blockId]);
+
+                return ($draftIds === [] ? $live : $live->exclude('ID', $draftIds))->toArray();
+            });
 
             /** @var array<int, SiteTree> $pages */
             $pages = [];
@@ -475,15 +492,14 @@ class SharedBlockService
             // Both modes delete this locale's placements and its block content,
             // so either one, on either stage, makes the locale one the delete
             // writes into.
-            $held = $references !== [] || $root !== null || Versioned::withVersionedMode(
+            $held = $references !== [] || $liveOnly !== [] || $root !== null || Versioned::withVersionedMode(
                 static function () use ($blockId): bool {
                     Versioned::set_stage(Versioned::LIVE);
 
-                    return SharedBlockReference::get()->filter(['BlockID' => $blockId])->exists()
-                        || GridElement::get()->filter([
-                            'ParentID' => $blockId,
-                            'ParentClass' => SharedBlock::class,
-                        ])->exists();
+                    return GridElement::get()->filter([
+                        'ParentID' => $blockId,
+                        'ParentClass' => SharedBlock::class,
+                    ])->exists();
                 },
             );
 
@@ -495,6 +511,7 @@ class SharedBlockService
             return [
                 'locale' => $locale,
                 'references' => $references,
+                'liveOnly' => $liveOnly,
                 'held' => $held,
                 'root' => $root,
                 'pages' => array_values($pages),
@@ -564,7 +581,10 @@ class SharedBlockService
      */
     private function unshareAll(array $usage): void
     {
-        $placed = array_filter($usage, static fn (array $locale): bool => $locale['references'] !== []);
+        $placed = array_filter(
+            $usage,
+            static fn (array $locale): bool => $locale['references'] !== [] || $locale['liveOnly'] !== [],
+        );
 
         if ($placed === []) {
             return;
@@ -600,7 +620,27 @@ class SharedBlockService
                     $copy->publishRecursive();
                 }
             }
+
+            foreach ($usage['liveOnly'] as $reference) {
+                $this->keepOnLiveOnly($reference, $root);
+            }
         });
+    }
+
+    /**
+     * A placement left on live alone is one the page's draft already dropped:
+     * an editor removed it and has not published that yet. Visitors keep
+     * seeing the content through a live-only copy until they do — the page's
+     * next publish takes the copy off live, as it would have the placement.
+     * The block's own cleanup deletes the live placement itself.
+     */
+    private function keepOnLiveOnly(SharedBlockReference $reference, GridElement $root): void
+    {
+        $copy = $this->copyInPlaceOf($reference, $root);
+        $copy->publishRecursive();
+
+        // $cascade_deletes takes the copy's subtree off draft with it.
+        $copy->deleteFromStage(Versioned::DRAFT);
     }
 
     /**
