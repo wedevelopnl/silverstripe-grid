@@ -73,11 +73,14 @@ class RepairSharedBlockPlacementsTask extends BuildTask
         $stranded = [];
         /** @var list<string> $manual */
         $manual = [];
+        /** @var array<int, true> $unclassified */
+        $unclassified = [];
 
         foreach (self::STAGES as $suffix => $stage) {
             foreach ($this->strandedRows($suffix) as $row) {
                 if ($row['parentClass'] === null) {
                     $manual[] = $this->describeUnclassifiable($row['id'], $stage);
+                    $unclassified[$row['id']] = true;
 
                     continue;
                 }
@@ -89,6 +92,10 @@ class RepairSharedBlockPlacementsTask extends BuildTask
                 ];
             }
         }
+
+        // A placement left to a person stays whole, even where its other stage
+        // could have been classified.
+        $stranded = array_diff_key($stranded, $unclassified);
 
         if ($stranded === [] && $manual === []) {
             $output->writeln(_t(
@@ -105,7 +112,7 @@ class RepairSharedBlockPlacementsTask extends BuildTask
 
         $this->reportPages($stranded, $dryRun, $output);
 
-        if (!$dryRun) {
+        if (!$dryRun && $stranded !== []) {
             $this->remove(array_keys($stranded));
         }
 
