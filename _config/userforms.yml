@@ -14,8 +14,3 @@ SilverStripe\UserForms\Control\UserDefinedFormController:
 SilverStripe\UserForms\Model\Submission\SubmittedForm:
   extensions:
     GridHostPage: WeDevelop\Grid\UserForms\SubmittedFormHostPageExtension
-
-SilverStripe\Core\Injector\Injector:
-  WeDevelop\Grid\UserForms\UserFormElementResolver:
-    constructor:
-      usageResolver: '%$WeDevelop\Grid\Service\SharedBlockUsageResolver'

@@ -7,7 +7,7 @@ namespace WeDevelop\Grid\UserForms;
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Core\Injector\Injectable;
 use WeDevelop\Grid\Model\SharedBlock;
-use WeDevelop\Grid\Service\SharedBlockUsageResolver;
+use WeDevelop\Grid\Model\SharedBlockReference;
 
 /**
  * Finds the form element a page's grid-form route may serve: one in the page's
@@ -18,11 +18,6 @@ use WeDevelop\Grid\Service\SharedBlockUsageResolver;
 class UserFormElementResolver
 {
     use Injectable;
-
-    public function __construct(
-        private readonly SharedBlockUsageResolver $usageResolver,
-    ) {
-    }
 
     /** @param positive-int $id */
     public function resolve(SiteTree $page, int $id): ?UserFormElement
@@ -40,7 +35,11 @@ class UserFormElementResolver
         }
 
         if ($owner instanceof SharedBlock) {
-            foreach ($this->usageResolver->pagesUsing($owner) as $using) {
+            // Not SharedBlockUsageResolver: it counts every locale's placements,
+            // and a page shows a block only where it is placed in this one.
+            foreach (SharedBlockReference::get()->filter(['BlockID' => $owner->ID]) as $reference) {
+                $using = $reference->getPage();
+
                 if ($using instanceof SiteTree && $using->ID === $page->ID) {
                     return $element;
                 }
