@@ -16,7 +16,7 @@ A shared block is grid content maintained once in a library and placed on any nu
 | `src/Service/SharedBlockLocaliser.php` | Gives a block content in the active Fluent locale |
 | `src/Admin/SharedBlockAdmin.php` | The library screen |
 | `src/Forms/GridFieldAddSharedBlockButton.php` | The library's create control (with `client/js/shared-block-add.js`) |
-| `src/Forms/SharedBlockItemRequest.php` | The block edit form's two delete actions |
+| `src/Forms/SharedBlockItemRequest.php` | The block edit form's delete actions (two for a placed block, one for an unplaced one) |
 | `src/Value/SharedBlockMeta.php`, `SharedBlockStatus.php`, `SharedBlockDeleteMode.php` | Wire metadata, aggregate publish state, delete mode |
 | `client/src/js/components/SharedBlockFrame/` | The read-only frame a placement renders in the page editor |
 | `client/src/js/utils/sharedBlockNesting.ts` | Client mirror of the no-nesting check |
@@ -133,7 +133,7 @@ The stock `item/new` route is closed: `SharedBlockItemRequest::ItemEditForm()` 4
 
 ### Deleting
 
-Deleting a block is always allowed — `SharedBlock::canDelete()` does not veto on usage — but the caller must choose what happens to the placements:
+Usage never blocks a delete — `SharedBlock::canDelete()` does not veto on it, and only the locale permission check and an empty `Unshare` below refuse one — but the caller must choose what happens to the placements:
 
 | `SharedBlockDeleteMode` | Effect |
 |---|---|
@@ -154,11 +154,11 @@ A failure anywhere — a refused write, a page that cannot be saved — rolls ev
 
 The block record is one cross-locale row while its subtree and its placements are stored per locale, and every query, and the `RootElements` cascade, sees only the active locale. `LocaleScope::each()` runs an operation once per locale, default first (once, in the ambient state, without Fluent isolation); the delete, the cleanup below and `SharedBlockUsageResolver` all go through it.
 
-`SharedBlock::onBeforeDelete()`, in every locale, archives every remaining reference on draft, deletes live-only stragglers from live, and deletes the locale's block roots on the stage being deleted (cascading down the subtree, as `RootElements` does for the active locale). Placements are page content, so no ownership config on the block reaches them; this hook is what keeps references from being stranded on every delete path (the CMS action, a dev task, a bare `delete()` in project code). Never bypass it by deleting rows directly.
+`SharedBlock::onBeforeDelete()`, in every locale, deletes the locale's block roots on the stage being deleted (cascading down the subtree, as `RootElements` does for the active locale) and, when the record leaves draft, archives every remaining reference on draft and deletes live-only stragglers from live. A delete from live alone is an unpublish: it keeps the placements, and the pages show the block again once it is republished. Placements are page content, so no ownership config on the block reaches them; this hook is what keeps references from being stranded on every delete path (the CMS action, a dev task, a bare `delete()` in project code). Never bypass it by deleting rows directly.
 
-Releases 6.0.0-beta.4 and beta.5 ran this cleanup in the active locale only, so a site that deleted a block placed in several locales may hold placements pointing at a block record that is gone. `sake tasks:repair-shared-block-placements [--dry-run]` (`Task\OneTime\Beta6\RepairSharedBlockPlacementsTask`) removes them from draft, live and history in every locale and lists their pages; it leaves the block's orphaned subtree rows alone, since nothing records whether an earlier delete meant to keep that content.
+Releases 6.0.0-beta.4 and beta.5 ran this cleanup in the active locale only, so a site that deleted a block placed in several locales may hold placements pointing at a block record that is gone. `sake tasks:repair-shared-block-placements [--dry-run]` (`Task\OneTime\Beta6\RepairSharedBlockPlacementsTask`) removes them — only placements whose block is gone from both stages — from draft, live and history in every locale and lists their pages. A placement whose element row is missing cannot be tied to a page or locale: it is listed for manual review, kept whole, and the run exits with failure. The task leaves the block's orphaned subtree rows alone, since nothing records whether an earlier delete meant to keep that content.
 
-The library **listing** offers no removal: `getGridFieldConfig()` removes both `GridFieldArchiveAction` and `GridFieldDeleteAction`. Both must go — for a versioned model the archive action is what suppresses the stock delete (`augmentColumns()`), so removing it alone promotes the row action to a permanent delete. A row cannot ask for the mode, so removal lives only in the edit form.
+The library **listing** offers no removal: `getGridFieldConfig()` removes both `GridFieldArchiveAction` and `GridFieldDeleteAction`. Both must go — for a versioned model the archive action is what suppresses the stock delete (`augmentColumns()`), so removing it alone promotes the row action to a permanent delete. A row cannot ask for the mode, so removal lives only in the edit form. For the same reason the library has no CSV import (`SharedBlockAdmin::$showImportForm = false`): the stock import creates rootless blocks, and its "Replace data" deletes the library past `SharedBlockService::delete()`.
 
 ## Validation
 

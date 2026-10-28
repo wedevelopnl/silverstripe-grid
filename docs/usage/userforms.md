@@ -59,7 +59,7 @@ Only the submitted form changes to its on-complete message. Any other form on th
 
 Reloading the `finished` URL, or opening it directly, sends the visitor back to the page and records nothing.
 
-The route only serves forms that belong to the page: a form in the page's own grid, or one inside a shared block the page places. Any other ID returns 404.
+The route only serves forms that belong to the page: a form in the page's own grid, or one inside a shared block the page places in the language being visited. Any other ID returns 404.
 
 ## Templates
 
