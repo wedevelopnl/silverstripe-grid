@@ -14,3 +14,17 @@ WeDevelop\Grid\Model\Row:
 WeDevelop\Grid\Model\Column:
   cares:
     - Elements
+# A placement holds none of its block's content, so the change has to travel
+# from the block to every placement. `References` exists for that edge alone and
+# adds no column. It is `touches` on the block, not `cares: [Block]` on the
+# placement: KFC resolves an undotted `cares` by Injector::get() of the class,
+# a singleton placement whose injected SharedBlockUsageResolver then outlives
+# the request scope and serves stale usage.
+WeDevelop\Grid\Model\SharedBlock:
+  has_many:
+    References: WeDevelop\Grid\Model\SharedBlockReference.Block
+  scaffold_cms_fields_settings:
+    ignoreRelations:
+      - References
+  touches:
+    - References
