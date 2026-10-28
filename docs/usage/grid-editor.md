@@ -123,7 +123,7 @@ Every element exposes the same action set. On wide headers it renders as an icon
 | **Open in a new tab** | The element's edit form, in a new browser tab. |
 | **Edit** | The element's edit form, in the current tab. |
 | **Archive** | Removes the element. Asks for confirmation and names how many child elements go with it. |
-| **Duplicate to…** | Copies the element to another page, choosing target page → zone → parent container. |
+| **Duplicate to…** | Copies the element to another page, choosing target page → zone → parent container. A page with a single zone skips the zone step, in both directions: **Back** from the next step returns to the page list. |
 | **Convert to shared block** | Moves the element and its subtree into the shared block library, leaving a placement behind so this page keeps showing it. See [Shared blocks](shared-blocks.md). Not offered on a placement, on anything inside a block, or on content that already holds a placement — a block may not contain another one. |
 
 Permissions are applied per action: **Archive** needs delete permission on the element, **Duplicate** and **Duplicate to…** need create permission, and **Convert to shared block** needs create permission on shared blocks (the library's own CMS section). An action the user cannot perform is dropped from the overflow menu entirely, and rendered greyed out in the icon row so the toolbar keeps a stable shape.
@@ -143,7 +143,7 @@ Grouped controls follow the W3C toolbar and listbox patterns: the **group** is a
 | Element action row | the row, once | `←` `→` between actions, `Home` / `End` to either end | runs the action | — |
 | `⋯` overflow menu | its trigger, the row's last stop | `↑` `↓` between items, `Home` / `End` | runs the item | closes it, focus returns to `⋯` |
 | Width and offset pickers | the trigger | `↑` `↓` between values, `Home` / `End` | picks the value | closes it, focus returns to the trigger |
-| **Duplicate to…** lists | each list, once | `↑` `↓` between options, `Home` / `End` | selects it and moves to the next step | closes the dialog |
+| **Duplicate to…** lists | each list, once | `↑` `↓` between options, `Home` / `End` | selects it; **Next** moves to the next step | closes the dialog |
 | **Add content** picker | the search field (focused on open) | `↑` `↓` between matching types while typing | `Enter` adds the block | closes the dialog |
 
 Navigation stops at the ends rather than wrapping. Entries you cannot use stay reachable so the list still reads completely — they simply refuse to activate, which is how a page with no grid zones behaves in **Duplicate to…**.

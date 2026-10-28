@@ -475,6 +475,34 @@ describe('DuplicateToDialog', () => {
       })
     })
 
+    it('Back button returns to page step when the target page has only one zone', async () => {
+      const user = userEvent.setup()
+      mockApiRoutes({ zones: ['main'] })
+      renderDialog({ elementType: 'element' })
+
+      // Single zone: the page step auto-advances straight to the container step
+      await selectPageAndAdvance(user)
+      await waitFor(() => {
+        expect(screen.getByTestId('duplicate-to-step-container')).toBeInTheDocument()
+      })
+
+      await user.click(screen.getByTestId('duplicate-to-back'))
+
+      // Must land on page step — zone would immediately auto-advance again
+      await waitFor(() => {
+        expect(screen.getByTestId('duplicate-to-step-page')).toBeInTheDocument()
+      })
+
+      // The zone picked on the author's behalf is forgotten: a page with two
+      // zones now starts its zone step with nothing selected.
+      mockApiRoutes()
+      await selectPageAndAdvance(user, 'Home')
+      await waitFor(() => {
+        expect(screen.getByTestId('duplicate-to-zone-list')).toBeInTheDocument()
+      })
+      expect(screen.getByTestId('duplicate-to-next')).toBeDisabled()
+    })
+
     it('Confirm calls onConfirm with selected page, zone, and container', async () => {
       const user = userEvent.setup()
       mockApiRoutes()
