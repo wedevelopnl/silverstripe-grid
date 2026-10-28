@@ -223,10 +223,10 @@ final class SharedBlockItemRequestTest extends FunctionalTest
         $reloaded = SiteTree::get()->byID($page->ID);
 
         self::assertNotNull($reloaded);
-        self::assertGreaterThan(
-            $before,
+        self::assertSame(
+            $before + 1,
             (int) $reloaded->Version,
-            'the page renders something else now, so its draft has to say so',
+            'the delete records one new draft version; the form handler adds none of its own',
         );
     }
 
@@ -239,6 +239,11 @@ final class SharedBlockItemRequestTest extends FunctionalTest
 
         self::assertNotNull(SharedBlock::get()->byID($block->ID), 'the block survives');
         self::assertNotNull(SharedBlockReference::get()->byID($reference->ID));
+        self::assertStringContainsString(
+            'This block has no content left to keep. Delete it and remove the placements instead.',
+            $this->editForm($block),
+            'the refusal reaches the author as the form message',
+        );
     }
 
     public function testAMemberWithoutPageAccessCannotDeleteThroughTheForm(): void

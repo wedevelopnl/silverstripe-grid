@@ -7,6 +7,7 @@ namespace WeDevelop\Grid\Tests\Integration\Fluent;
 use Page;
 use PHPUnit\Framework\Attributes\CoversClass;
 use SilverStripe\Core\Injector\Injector;
+use SilverStripe\Versioned\Versioned;
 use TractorCow\Fluent\Service\CopyToLocaleService;
 use TractorCow\Fluent\State\FluentState;
 use WeDevelop\Grid\Extensions\FluentSharedBlockExtension;
@@ -19,8 +20,10 @@ use WeDevelop\Grid\Model\SharedBlockReference;
 use WeDevelop\Grid\Service\GridAwareDeleteLocalisationPolicy;
 use WeDevelop\Grid\Service\GridTreeService;
 use WeDevelop\Grid\Service\SharedBlockService;
+use WeDevelop\Grid\Service\SharedBlockUsageResolver;
 use WeDevelop\Grid\Service\LocalisedSubtreeCloner;
 use WeDevelop\Grid\Tests\Integration\Support\GridTreeFactory;
+use WeDevelop\Grid\Value\SharedBlockDeleteMode;
 
 /**
  * Shared blocks under Fluent: the block RECORD is one cross-locale row, its
@@ -30,6 +33,9 @@ use WeDevelop\Grid\Tests\Integration\Support\GridTreeFactory;
 #[CoversClass(FluentSharedBlockExtension::class)]
 #[CoversClass(LocalisedSubtreeCloner::class)]
 #[CoversClass(GridAwareDeleteLocalisationPolicy::class)]
+#[CoversClass(SharedBlockService::class)]
+#[CoversClass(SharedBlockUsageResolver::class)]
+#[CoversClass(SharedBlock::class)]
 final class FluentSharedBlockTest extends FluentGridTestCase
 {
     /** A block with a Section > Row > Column > leaf subtree in the active locale. */
@@ -504,5 +510,219 @@ final class FluentSharedBlockTest extends FluentGridTestCase
         $nlLeaf = $nlRow->Columns()->first()?->getChildren()->first();
         self::assertInstanceOf(ContentElement::class, $nlLeaf);
         self::assertSame('Hero Content', $nlLeaf->Title);
+    }
+
+    /**
+     * "Opening hours" placed on "Contact" in English and Dutch, each locale
+     * with its own wording of the block, everything published in both.
+     */
+    private function blockPublishedInBothLocales(): array
+    {
+        $page = $this->createPage('Contact');
+        $block = $this->populatedBlock('Opening hours');
+        GridTreeFactory::reference($page, $block, zone: 'main');
+
+        // Copying the page carries the placement and localises the block.
+        CopyToLocaleService::singleton()->copyToLocale(Page::class, (int) $page->ID, 'en_US', 'nl_NL');
+
+        $this->inLocale('nl_NL', static function () use ($block): void {
+            $leaf = ContentElement::get()->filter(['Title' => 'Shared leaf'])->first();
+            self::assertNotNull($leaf, 'precondition: Dutch holds its own block content');
+            $leaf->Title = 'Gedeelde tekst';
+            $leaf->write();
+        });
+
+        foreach (['en_US', 'nl_NL'] as $locale) {
+            $this->inLocale($locale, static function () use ($block, $page): void {
+                SharedBlock::get()->byID($block->ID)?->publishRecursive();
+                Page::get()->byID($page->ID)?->publishRecursive();
+            });
+        }
+
+        return ['block' => $block, 'page' => $page];
+    }
+
+    /**
+     * @template T
+     * @param callable(): T $callback
+     * @return T
+     */
+    private function inLocale(string $locale, callable $callback): mixed
+    {
+        return FluentState::singleton()->withState(static function (FluentState $state) use ($locale, $callback): mixed {
+            $state->setLocale($locale);
+
+            return $callback();
+        });
+    }
+
+    /**
+     * @template T
+     * @param callable(): T $callback
+     * @return T
+     */
+    private function onStage(string $stage, callable $callback): mixed
+    {
+        return Versioned::withVersionedMode(static function () use ($stage, $callback): mixed {
+            Versioned::set_stage($stage);
+
+            return $callback();
+        });
+    }
+
+    /** Titles of the content elements on $page's grid in the active locale and stage. */
+    private function pageLeafTitles(Page $page): array
+    {
+        $titles = [];
+
+        foreach (Section::get()->filter(['ParentID' => $page->ID, 'ParentClass' => Page::class]) as $section) {
+            foreach ($section->Rows() as $row) {
+                foreach ($row->getChildren() as $column) {
+                    foreach ($column->getChildren() as $leaf) {
+                        $titles[] = (string) $leaf->Title;
+                    }
+                }
+            }
+        }
+
+        return $titles;
+    }
+
+    /** @return int<0, max> */
+    private function placementCount(SharedBlock $block): int
+    {
+        return SharedBlockReference::get()->filter(['BlockID' => $block->ID])->count();
+    }
+
+    public function testKeepingTheContentGivesEveryLocaleItsOwnCopy(): void
+    {
+        ['block' => $block, 'page' => $page] = $this->blockPublishedInBothLocales();
+
+        $result = Injector::inst()->get(SharedBlockService::class)->delete($block, SharedBlockDeleteMode::Unshare);
+
+        self::assertTrue($result->isOk(), 'the delete must succeed');
+        self::assertNull(SharedBlock::get()->byID($block->ID), 'the block left the library');
+
+        $expected = ['en_US' => 'Shared leaf', 'nl_NL' => 'Gedeelde tekst'];
+
+        foreach ($expected as $locale => $title) {
+            foreach ([Versioned::DRAFT, Versioned::LIVE] as $stage) {
+                [$titles, $placements] = $this->inLocale($locale, fn (): array => $this->onStage(
+                    $stage,
+                    fn (): array => [$this->pageLeafTitles($page), $this->placementCount($block)],
+                ));
+
+                self::assertSame([$title], $titles, "{$locale} {$stage} keeps its own wording of the block");
+                self::assertSame(0, $placements, "{$locale} {$stage} holds no placement any more");
+            }
+        }
+    }
+
+    public function testRemovingTheBlockLeavesNothingInAnyLocale(): void
+    {
+        ['block' => $block, 'page' => $page] = $this->blockPublishedInBothLocales();
+
+        $result = Injector::inst()->get(SharedBlockService::class)->delete($block, SharedBlockDeleteMode::Remove);
+
+        self::assertTrue($result->isOk());
+
+        foreach (['en_US', 'nl_NL'] as $locale) {
+            foreach ([Versioned::DRAFT, Versioned::LIVE] as $stage) {
+                [$placements, $roots, $titles] = $this->inLocale($locale, fn (): array => $this->onStage(
+                    $stage,
+                    fn (): array => [$this->placementCount($block), $this->rootCount($block), $this->pageLeafTitles($page)],
+                ));
+
+                self::assertSame(0, $placements, "{$locale} {$stage}: no stranded placement");
+                self::assertSame(0, $roots, "{$locale} {$stage}: no orphaned block subtree");
+                self::assertSame([], $titles, "{$locale} {$stage}: the page shows nothing of the block");
+            }
+        }
+    }
+
+    public function testKeepingTheContentRemovesPlacementsInALocaleWithoutContent(): void
+    {
+        // Those placements render nothing today, so removing them keeps the
+        // page showing exactly what it showed.
+        ['block' => $block, 'page' => $page] = $this->blockPublishedInBothLocales();
+
+        $this->inLocale('nl_NL', function () use ($block): void {
+            foreach (GridElement::get()->filter(['ParentID' => $block->ID, 'ParentClass' => SharedBlock::class]) as $root) {
+                $root->doArchive();
+            }
+        });
+
+        $result = Injector::inst()->get(SharedBlockService::class)->delete($block, SharedBlockDeleteMode::Unshare);
+
+        self::assertTrue($result->isOk(), 'English still has content to keep');
+
+        [$nlPlacements, $nlTitles] = $this->inLocale('nl_NL', fn (): array => [
+            $this->placementCount($block),
+            $this->pageLeafTitles($page),
+        ]);
+        self::assertSame(0, $nlPlacements, 'the Dutch placement is gone');
+        self::assertSame([], $nlTitles, 'and Dutch gained no copy of English content');
+
+        self::assertSame(['Shared leaf'], $this->pageLeafTitles($page), 'English kept its copy');
+    }
+
+    public function testDeletingRecordsANewDraftVersionOfThePageInEveryLocale(): void
+    {
+        ['block' => $block, 'page' => $page] = $this->blockPublishedInBothLocales();
+
+        $version = fn (): int => (int) Page::get()->byID($page->ID)?->Version;
+        $before = ['en_US' => $this->inLocale('en_US', $version), 'nl_NL' => $this->inLocale('nl_NL', $version)];
+
+        Injector::inst()->get(SharedBlockService::class)->delete($block, SharedBlockDeleteMode::Remove)->unwrap();
+
+        foreach ($before as $locale => $previous) {
+            self::assertGreaterThan($previous, $this->inLocale($locale, $version), "{$locale} records the change");
+        }
+    }
+
+    public function testAMemberRestrictedToOneLocaleCannotDeleteABlockPlacedInAnother(): void
+    {
+        ['block' => $block] = $this->blockPublishedInBothLocales();
+
+        $this->logInWithPermission(['CMS_ACCESS_CMSMain', 'Fluent_Locale_en_US']);
+
+        $result = Injector::inst()->get(SharedBlockService::class)->delete($block, SharedBlockDeleteMode::Remove);
+
+        self::assertTrue($result->isErr(), 'the delete would write into Dutch, which this member may not edit');
+        self::assertSame(
+            'You can\'t delete "Opening hours": it is also placed on pages in Dutch, which you may not edit.'
+                . ' Ask someone who can edit every language this block is placed in.',
+            $result->errors()[0]->translate(),
+        );
+        self::assertNotNull(SharedBlock::get()->byID($block->ID), 'nothing was deleted');
+        self::assertSame(1, $this->inLocale('nl_NL', fn (): int => $this->placementCount($block)));
+        self::assertSame(1, $this->placementCount($block));
+    }
+
+    public function testTheMultiLocaleActionPermissionAllowsTheDelete(): void
+    {
+        ['block' => $block] = $this->blockPublishedInBothLocales();
+
+        $this->logInWithPermission(['CMS_ACCESS_CMSMain', 'Fluent_Locale_en_US', 'Fluent_Actions_MultiLocale']);
+
+        $result = Injector::inst()->get(SharedBlockService::class)->delete($block, SharedBlockDeleteMode::Remove);
+
+        self::assertTrue($result->isOk());
+        self::assertSame(0, $this->inLocale('nl_NL', fn (): int => $this->placementCount($block)));
+    }
+
+    public function testUsageCountsEveryLocaleAndAPageInSeveralLocalesOnce(): void
+    {
+        ['block' => $block] = $this->blockPublishedInBothLocales();
+
+        $this->inLocale('nl_NL', function () use ($block): void {
+            $dutchOnly = $this->createPage('Over ons');
+            GridTreeFactory::reference($dutchOnly, $block, zone: 'main');
+        });
+
+        $resolver = SharedBlockUsageResolver::create();
+
+        self::assertSame(2, $resolver->usageCount($block), 'Contact once, Over ons once');
+        self::assertCount(2, $resolver->pagesUsing($block));
     }
 }

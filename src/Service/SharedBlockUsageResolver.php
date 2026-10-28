@@ -14,8 +14,8 @@ use WeDevelop\Grid\Model\SharedBlockReference;
  * Resolves which pages consume a shared block.
  *
  * Counts distinct PAGES, not placements: a page that places the same block in
- * two zones uses it once, and under Fluent the per-locale reference rows of one
- * page collapse to that single page too.
+ * two zones uses it once, and under Fluent the placements of every locale are
+ * read, with the per-locale rows of one page collapsing to that single page.
  */
 class SharedBlockUsageResolver
 {
@@ -95,17 +95,21 @@ class SharedBlockUsageResolver
         /** @var array<string, DataObject> $pages */
         $pages = [];
 
-        foreach (SharedBlockReference::get()->filter(['BlockID' => $blockId]) as $reference) {
-            $page = $reference->getPage();
+        // Default locale first, and the first locale to name a page wins, so
+        // the page is listed under its default-locale title where it has one.
+        LocaleScope::singleton()->each(static function () use ($blockId, &$pages): void {
+            foreach (SharedBlockReference::get()->filter(['BlockID' => $blockId]) as $reference) {
+                $page = $reference->getPage();
 
-            if ($page === null) {
-                continue;
+                if ($page === null) {
+                    continue;
+                }
+
+                // Page IDs collide across polymorphic namespaces, so dedupe on
+                // the composite key the rest of the module keys parents by.
+                $pages[$page::class . ':' . $page->ID] ??= $page;
             }
-
-            // Page IDs collide across polymorphic namespaces, so dedupe on the
-            // composite key the rest of the module keys parents by.
-            $pages[$page::class . ':' . $page->ID] = $page;
-        }
+        });
 
         return array_values($pages);
     }

@@ -138,11 +138,23 @@ Deleting a block is always allowed — `SharedBlock::canDelete()` does not veto 
 | `SharedBlockDeleteMode` | Effect |
 |---|---|
 | `Remove` | Placements are archived with the block |
-| `Unshare` | Each placement is first replaced with an independent copy (the detach mechanism); the copy is published wherever the placement was live. Refused when the block has no root left to copy |
+| `Unshare` | Each placement is first replaced with an independent copy (the detach mechanism, with auto-scaffolding suppressed so the copy matches the block exactly); the copy is published wherever the placement was live. Refused (`UNSHARE_EMPTY_BLOCK`) when no locale that places the block has a root left to copy |
 
 Both reach live without republishing the consuming pages.
 
-`SharedBlock::onBeforeDelete()` archives every remaining reference on draft, and deletes live-only stragglers from live. Placements are page content, so no ownership config on the block reaches them; this hook is what keeps references from being stranded on every delete path (the CMS action, a dev task, a bare `delete()` in project code). Never bypass it by deleting rows directly.
+`SharedBlockService::delete()` owns the whole operation, inside one `Transactional::run()`:
+
+1. Read what each locale holds of the block — placements on draft and live, the root, the consuming pages.
+2. Refuse (`LOCALE_PERMISSION`, naming the locale titles) unless the member holds `Fluent_Actions_MultiLocale` or passes `SharedBlock::canDelete()` with each placing locale active. Fluent filters a member's groups by the active locale, so `Permission::reset()` runs before each check. Nothing has been written yet.
+3. `Unshare`: in each locale, copy that locale's root onto that locale's placements. A locale with placements but no root gets no copy; its placements go with the block.
+4. Archive the block record.
+5. Write a draft version of each consuming page, in the locale whose placement changed.
+
+A failure anywhere — a refused write, a page that cannot be saved — rolls every locale back. `SharedBlockItemRequest` only maps the `Result` to a response.
+
+The block record is one cross-locale row while its subtree and its placements are stored per locale, and every query, and the `RootElements` cascade, sees only the active locale. `LocaleScope::each()` runs an operation once per locale, default first (once, in the ambient state, without Fluent isolation); the delete, the cleanup below and `SharedBlockUsageResolver` all go through it.
+
+`SharedBlock::onBeforeDelete()`, in every locale, archives every remaining reference on draft, deletes live-only stragglers from live, and deletes the locale's block roots on the stage being deleted (cascading down the subtree, as `RootElements` does for the active locale). Placements are page content, so no ownership config on the block reaches them; this hook is what keeps references from being stranded on every delete path (the CMS action, a dev task, a bare `delete()` in project code). Never bypass it by deleting rows directly.
 
 The library **listing** offers no removal: `getGridFieldConfig()` removes both `GridFieldArchiveAction` and `GridFieldDeleteAction`. Both must go — for a versioned model the archive action is what suppresses the stock delete (`augmentColumns()`), so removing it alone promotes the row action to a permanent delete. A row cannot ask for the mode, so removal lives only in the edit form.
 

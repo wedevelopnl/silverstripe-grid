@@ -607,4 +607,38 @@ final class SharedBlockServiceTest extends SapphireTest
         self::assertSame(0, $result->unwrap());
         self::assertNull(SharedBlock::get()->byID($block->ID));
     }
+
+    public function testKeepingTheContentCopiesAnEmptySectionWithoutScaffoldingIt(): void
+    {
+        // The copy must match the block exactly: a Section that holds no Row in
+        // the block holds none on the page either.
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $block = GridTreeFactory::sharedBlock();
+        GridTreeFactory::section($block, zone: '', title: 'Empty shared section');
+        GridTreeFactory::reference($page, $block);
+
+        $this->enableAutoScaffolding();
+
+        self::assertTrue($this->service->delete($block, SharedBlockDeleteMode::Unshare)->isOk());
+
+        $copy = Section::get()->filter(['ParentID' => $page->ID, 'ParentClass' => $page::class])->first();
+        self::assertInstanceOf(Section::class, $copy);
+        self::assertSame(0, $copy->Rows()->count(), 'no scaffolded Row on the copy');
+    }
+
+    public function testDeletingRecordsANewDraftVersionOnEveryConsumingPage(): void
+    {
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $block = $this->sectionRootedBlock();
+        GridTreeFactory::reference($page, $block);
+        $before = (int) $page->Version;
+
+        self::assertTrue($this->service->delete($block, SharedBlockDeleteMode::Remove)->isOk());
+
+        self::assertSame(
+            $before + 1,
+            (int) Page::get()->byID($page->ID)?->Version,
+            'the page renders something else now, so its draft records that once',
+        );
+    }
 }

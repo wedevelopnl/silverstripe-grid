@@ -24,6 +24,7 @@ use SilverStripe\Security\Security;
 use SilverStripe\Versioned\Versioned;
 use WeDevelop\Grid\Admin\SharedBlockAdmin;
 use WeDevelop\Grid\Forms\GridEditorField;
+use WeDevelop\Grid\Service\LocaleScope;
 use WeDevelop\Grid\Service\SharedBlockUsageResolver;
 
 /**
@@ -382,16 +383,21 @@ class SharedBlock extends DataObject
 
     /**
      * Placements are page content, so no ownership config on this record
-     * reaches them and a delete would strand every reference. A stranded
-     * reference does more than render empty: it resolves no effective root
-     * class, which fails every later write on that page's grid with
+     * reaches them and a delete would strand every reference: it would render
+     * nothing, and placing, moving or detaching it would fail with
      * BLOCK_EMPTY. Cleaning up here rather than in
      * {@see \WeDevelop\Grid\Service\SharedBlockService::delete()} holds the
      * invariant on every delete path — the CMS action, a dev task, a bare
      * delete() in project code.
      *
+     * Runs in every locale: this record is one row for the whole site, while
+     * its placements and its subtree are stored per locale, and both the
+     * queries below and the RootElements cascade only ever see the active
+     * locale. Each locale's subtree is deleted on the stage being deleted, as
+     * the cascade does it for the active one.
+     *
      * The unshare path detaches its placements before deleting, so by the time
-     * this runs there is nothing left for it to find.
+     * this runs there are only the placements it chose not to keep.
      */
     #[Override]
     protected function onBeforeDelete(): void
@@ -404,17 +410,25 @@ class SharedBlock extends DataObject
             return;
         }
 
-        foreach (SharedBlockReference::get()->filter(['BlockID' => $blockId]) as $reference) {
-            $reference->doArchive();
-        }
-
-        // A placement survives on live alone when its draft row was deleted
-        // without unpublishing first, and doArchive() above never sees those.
-        Versioned::withVersionedMode(static function () use ($blockId): void {
-            Versioned::set_stage(Versioned::LIVE);
-
+        LocaleScope::singleton()->each(static function () use ($blockId): void {
             foreach (SharedBlockReference::get()->filter(['BlockID' => $blockId]) as $reference) {
-                $reference->deleteFromStage(Versioned::LIVE);
+                $reference->doArchive();
+            }
+
+            // A placement survives on live alone when its draft row was deleted
+            // without unpublishing first, and doArchive() above never sees those.
+            Versioned::withVersionedMode(static function () use ($blockId): void {
+                Versioned::set_stage(Versioned::LIVE);
+
+                foreach (SharedBlockReference::get()->filter(['BlockID' => $blockId]) as $reference) {
+                    $reference->deleteFromStage(Versioned::LIVE);
+                }
+            });
+
+            $roots = GridElement::get()->filter(['ParentID' => $blockId, 'ParentClass' => self::class]);
+
+            foreach ($roots as $root) {
+                $root->delete();
             }
         });
     }

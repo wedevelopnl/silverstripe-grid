@@ -8,9 +8,15 @@ use NoDiscard;
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Core\Validation\ValidationException;
+use SilverStripe\Core\Config\Config;
 use SilverStripe\ORM\DataObject;
+use SilverStripe\Security\Permission;
+use SilverStripe\Versioned\Versioned;
+use TractorCow\Fluent\Model\Locale;
 use WeDevelop\Grid\Contract\ReorderValidatorInterface;
 use WeDevelop\Grid\Model\GridElement;
+use WeDevelop\Grid\Model\Row;
+use WeDevelop\Grid\Model\Section;
 use WeDevelop\Grid\Model\SharedBlock;
 use WeDevelop\Grid\Model\SharedBlockReference;
 use WeDevelop\Grid\Repository\GridElementRepositoryInterface;
@@ -34,6 +40,15 @@ use WeDevelop\Grid\Value\WriteResult;
  *
  * Publishing and deleting are the exceptions — both reach live immediately, on
  * every consuming page at once, which is the point of them.
+ *
+ * @phpstan-type LocaleUsage array{
+ *     locale: Locale|null,
+ *     references: list<SharedBlockReference>,
+ *     placed: bool,
+ *     root: GridElement|null,
+ *     pages: list<SiteTree>,
+ *     mayDelete: bool,
+ * }
  */
 class SharedBlockService
 {
@@ -42,6 +57,7 @@ class SharedBlockService
         private readonly ElementPlacementService $placementService,
         private readonly GridElementRepositoryInterface $elementRepository,
         private readonly SharedBlockLocaliser $localiser,
+        private readonly LocaleScope $locales,
     ) {
     }
 
@@ -50,8 +66,8 @@ class SharedBlockService
      *
      * Block and root are written together because a block without a root is a
      * broken state, not an intermediate one: it resolves no effective root
-     * class, so every page placing it renders nothing and later grid writes on
-     * those pages fail with BLOCK_EMPTY.
+     * class, so every page placing it renders nothing, and placing, moving or
+     * detaching it fails with BLOCK_EMPTY.
      *
      * The root's own write cascades the rest — a Section scaffolds a Row and a
      * Column, a Row scaffolds a Column, a Column and a leaf scaffold nothing.
@@ -324,19 +340,23 @@ class SharedBlockService
      */
     private function replaceWithCopy(SharedBlockReference $reference, GridElement $root): GridElement
     {
-        // cascade_duplicates carries the whole subtree; the copy comes
-        // back still pointing at the block, so re-point it immediately.
-        $copy = $root->duplicate(true);
+        $copy = $this->withoutScaffolding(static function () use ($reference, $root): GridElement {
+            // cascade_duplicates carries the whole subtree; the copy comes
+            // back still pointing at the block, so re-point it immediately.
+            $copy = $root->duplicate(true);
 
-        $copy->ParentID = $reference->ParentID;
-        $copy->ParentClass = $reference->ParentClass;
-        $copy->Sort = $reference->Sort;
+            $copy->ParentID = $reference->ParentID;
+            $copy->ParentClass = $reference->ParentClass;
+            $copy->Sort = $reference->Sort;
 
-        // The copy lands exactly where the reference sat, so it inherits the
-        // reference's Zone — '' whenever that was mid-tree.
-        $copy->Zone = (string) $reference->Zone;
+            // The copy lands exactly where the reference sat, so it inherits
+            // the reference's Zone — '' whenever that was mid-tree.
+            $copy->Zone = (string) $reference->Zone;
 
-        $copy->write();
+            $copy->write();
+
+            return $copy;
+        });
 
         $reference->doArchive();
 
@@ -344,49 +364,191 @@ class SharedBlockService
     }
 
     /**
+     * The cascade copies real children, so auto-scaffolding would only add
+     * extras — an empty Row under a Section the block holds empty, written by
+     * the duplicate or by the re-pointing write after it. Captured and restored
+     * explicitly, as {@see SharedBlockLocaliser} does: an unrestored override
+     * would leak for the rest of the request.
+     *
+     * @param callable(): GridElement $write
+     */
+    private function withoutScaffolding(callable $write): GridElement
+    {
+        /** @var bool $priorSectionScaffold */
+        $priorSectionScaffold = Section::config()->get('auto_scaffold');
+        /** @var bool $priorRowScaffold */
+        $priorRowScaffold = Row::config()->get('auto_scaffold');
+
+        Config::modify()->set(Section::class, 'auto_scaffold', false);
+        Config::modify()->set(Row::class, 'auto_scaffold', false);
+
+        try {
+            return $write();
+        } finally {
+            Config::modify()->set(Section::class, 'auto_scaffold', $priorSectionScaffold);
+            Config::modify()->set(Row::class, 'auto_scaffold', $priorRowScaffold);
+        }
+    }
+
+    /**
      * Retire $block from the library, resolving what happens to the content on
      * every page that places it.
+     *
+     * The block is one record for the whole site while its placements and its
+     * content are stored per locale, so both modes act on EVERY locale, whichever
+     * one is active: a Remove leaves no placement and no block content behind in
+     * any locale, an Unshare gives each page in each locale a copy of that
+     * locale's content.
      *
      * Both modes reach live without the consuming pages being republished,
      * which is what makes the operation usable at all: the alternative — making
      * the author clear every placement by hand first — scales with the size of
-     * the site.
+     * the site. Each consuming page still gets a new draft version recording
+     * the change, in each of its locales, inside the same transaction: a
+     * failure anywhere leaves block, placements and pages as they were.
      *
-     * @return Result<int<0, max>> Placements handled.
+     * @return Result<int<0, max>> Placements handled, across every locale.
      */
     #[NoDiscard('The Result carries the number of placements handled or the reason the delete was refused.')]
     public function delete(SharedBlock $block, SharedBlockDeleteMode $mode): Result
     {
-        return Transactional::run(fn(): Result => WriteResult::from(function () use ($block, $mode): int {
-            /** @var list<SharedBlockReference> $references */
-            $references = SharedBlockReference::get()->filter(['BlockID' => $block->ID])->toArray();
+        return Transactional::run(function () use ($block, $mode): Result {
+            $usage = $this->usageByLocale($block);
 
-            if ($mode === SharedBlockDeleteMode::Unshare) {
-                $this->unshareAll($block, $references);
+            $refusal = $this->refuseUneditableLocales($block, $usage);
+            if ($refusal !== null) {
+                return Result::fail($refusal);
             }
 
-            // Placements the unshare path did not consume — all of them in
-            // Remove mode, plus any live-only stragglers in either — are
-            // cleaned up by SharedBlock::onBeforeDelete().
-            $block->doArchive();
+            return WriteResult::from(function () use ($block, $mode, $usage): int {
+                if ($mode === SharedBlockDeleteMode::Unshare) {
+                    $this->unshareAll($usage);
+                }
 
-            return count($references);
-        }));
+                // Placements the unshare path did not consume — all of them in
+                // Remove mode, those of a locale without content, and any
+                // live-only stragglers — go with the block, in every locale:
+                // SharedBlock::onBeforeDelete() cleans them up.
+                $block->doArchive();
+
+                $this->recordOnConsumingPages($usage);
+
+                return array_sum(array_map(
+                    static fn (array $locale): int => count($locale['references']),
+                    $usage,
+                ));
+            });
+        });
     }
 
     /**
-     * @param list<SharedBlockReference> $references
-     * @throws ValidationException When the block has no content left to copy.
+     * What each locale holds of $block, read before anything changes.
+     *
+     * @return array<string, LocaleUsage>
      */
-    private function unshareAll(SharedBlock $block, array $references): void
+    private function usageByLocale(SharedBlock $block): array
     {
-        if ($references === []) {
+        $blockId = (int) $block->ID;
+
+        return $this->locales->each(static function (?Locale $locale) use ($block, $blockId): array {
+            /** @var list<SharedBlockReference> $references */
+            $references = SharedBlockReference::get()->filter(['BlockID' => $blockId])->toArray();
+
+            /** @var array<int, SiteTree> $pages */
+            $pages = [];
+
+            foreach ($references as $reference) {
+                $page = $reference->getPage();
+
+                if ($page instanceof SiteTree) {
+                    $pages[$page->ID] = $page;
+                }
+            }
+
+            $placed = $references !== [] || Versioned::withVersionedMode(static function () use ($blockId): bool {
+                Versioned::set_stage(Versioned::LIVE);
+
+                return SharedBlockReference::get()->filter(['BlockID' => $blockId])->exists();
+            });
+
+            // Fluent drops a locale-restricted group from the member while
+            // another locale is active, and Permission caches per member, so
+            // the cache has to go for the answer to be this locale's.
+            Permission::reset();
+
+            return [
+                'locale' => $locale,
+                'references' => $references,
+                'placed' => $placed,
+                'root' => $block->getRootElement(),
+                'pages' => array_values($pages),
+                'mayDelete' => $locale === null || $block->canDelete(),
+            ];
+        });
+    }
+
+    /**
+     * The delete writes into every locale holding a placement, so a member
+     * restricted to some locales would otherwise reach the others through it.
+     * Fluent's own rule for a cross-locale action applies: its multi-locale
+     * permission, or edit access in each locale concerned.
+     *
+     * @param array<string, LocaleUsage> $usage
+     */
+    private function refuseUneditableLocales(SharedBlock $block, array $usage): ?ValidationError
+    {
+        if (!$this->locales->isLocalised()) {
+            return null;
+        }
+
+        // The per-locale checks in usageByLocale() left the cache holding the
+        // last locale's answer; this check belongs to the active one.
+        Permission::reset();
+
+        if (Permission::check(Locale::CMS_ACCESS_MULTI_LOCALE)) {
+            return null;
+        }
+
+        $denied = [];
+
+        foreach ($usage as $locale) {
+            if ($locale['placed'] && !$locale['mayDelete'] && $locale['locale'] !== null) {
+                $denied[] = $locale['locale']->Title;
+            }
+        }
+
+        if ($denied === []) {
+            return null;
+        }
+
+        return new ValidationError(
+            message: 'You can\'t delete "{title}": it is also placed on pages in {locales}, which you may not edit.'
+                . ' Ask someone who can edit every language this block is placed in.',
+            key: self::class . '.LOCALE_PERMISSION',
+            params: ['title' => (string) $block->Title, 'locales' => implode(', ', $denied)],
+        );
+    }
+
+    /**
+     * Copy each locale's content onto that locale's placements.
+     *
+     * A locale that holds placements but no content gets no copy: its
+     * placements render nothing today, so leaving them to the block's own
+     * cleanup keeps those pages showing exactly what they show. Only when no
+     * placed locale has content at all is the mode refused.
+     *
+     * @param array<string, LocaleUsage> $usage
+     * @throws ValidationException When no locale has content left to copy.
+     */
+    private function unshareAll(array $usage): void
+    {
+        $placed = array_filter($usage, static fn (array $locale): bool => $locale['references'] !== []);
+
+        if ($placed === []) {
             return;
         }
 
-        $root = $block->getRootElement();
-
-        if ($root === null) {
+        if (array_filter($placed, static fn (array $locale): bool => $locale['root'] !== null) === []) {
             // Nothing to copy, so "keep the content" cannot be honoured. Saying
             // so beats silently degrading into the destructive mode.
             throw ValidationException::create(_t(
@@ -395,19 +557,43 @@ class SharedBlockService
             ));
         }
 
-        foreach ($references as $reference) {
-            // Read before the detach archives the reference: the copy has to
-            // reach live wherever the placement already was, or "each page
-            // keeps its own copy" would be false on every published page until
-            // someone happened to republish it.
-            $wasLive = $reference->isPublished();
+        $this->locales->each(function (?Locale $locale) use ($placed): void {
+            $usage = $placed[(string) $locale?->Locale] ?? null;
+            $root = $usage['root'] ?? null;
 
-            $copy = $this->replaceWithCopy($reference, $root);
-
-            if ($wasLive) {
-                $copy->publishRecursive();
+            if ($usage === null || $root === null) {
+                return;
             }
-        }
+
+            foreach ($usage['references'] as $reference) {
+                // Read before the detach archives the reference: the copy has
+                // to reach live wherever the placement already was, or "each
+                // page keeps its own copy" would be false on every published
+                // page until someone happened to republish it.
+                $wasLive = $reference->isPublished();
+
+                $copy = $this->replaceWithCopy($reference, $root);
+
+                if ($wasLive) {
+                    $copy->publishRecursive();
+                }
+            }
+        });
+    }
+
+    /**
+     * The consuming pages now render something else, so each needs a draft
+     * version recording that — in the locale whose placement changed.
+     *
+     * @param array<string, LocaleUsage> $usage
+     */
+    private function recordOnConsumingPages(array $usage): void
+    {
+        $this->locales->each(static function (?Locale $locale) use ($usage): void {
+            foreach ($usage[(string) $locale?->Locale]['pages'] ?? [] as $page) {
+                $page->writeToStage(Versioned::DRAFT);
+            }
+        });
     }
 
     /**
