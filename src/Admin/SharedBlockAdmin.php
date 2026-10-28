@@ -35,6 +35,15 @@ class SharedBlockAdmin extends ModelAdmin
      */
     private static string|array $required_permission_codes = 'CMS_ACCESS_CMSMain';
 
+    /**
+     * The stock CSV import creates blocks with no root, and its "Replace data"
+     * deletes the whole library past {@see \WeDevelop\Grid\Service\SharedBlockService::delete()}:
+     * no delete mode, no per-locale permission check, no page drafts.
+     *
+     * @var bool
+     */
+    public $showImportForm = false;
+
     private static string $url_segment = 'shared-blocks';
 
     private static string $menu_title = 'Shared blocks';
@@ -56,8 +65,8 @@ class SharedBlockAdmin extends ModelAdmin
      * It is inserted before the button it replaces, which is only then removed,
      * so it inherits that slot: fragments concatenate in component order, and
      * `GridFieldConfig_RecordEditor` registers the stock button ahead of
-     * ModelAdmin's export, print and import buttons. Appending instead would
-     * land the primary action last in the row, behind Import CSV.
+     * ModelAdmin's export and print buttons. Appending instead would land the
+     * primary action last in the row, behind Print.
      *
      * The detail form gets its own item request for the delete action, which
      * has to name what happens to the pages placing the block
