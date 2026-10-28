@@ -21,7 +21,7 @@
       {
         "hooks": [
           {
-            "command": ".claude/hooks/qa-gate.sh",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/qa-gate.sh",
             "timeout": 300,
             "type": "command"
           }
@@ -31,7 +31,7 @@
       {
         "hooks": [
           {
-            "command": ".claude/hooks/e2e-granularity-check.sh",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/e2e-granularity-check.sh",
             "timeout": 10,
             "type": "command"
           }
