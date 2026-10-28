@@ -15,4 +15,4 @@ Package: `wedevelopnl/silverstripe-grid` (type: `silverstripe-vendormodule`)
 - `silverstripe/framework` ^6.0, `silverstripe/cms` ^6.0, `silverstripe/admin` ^3.0, `silverstripe/versioned` ^3.0, `silverstripe/vendor-plugin` ^3.0
 - `unclecheese/display-logic` ^4.0, `wedevelopnl/silverstripe-media-field` ^6.0
 - Conflicts with `dnadesign/silverstripe-elemental` (replaces its functionality)
-- Optional: `silverstripe/reports` (CMS report), `tractorcow/silverstripe-fluent` (multi-locale), `silverstripe/userforms` ^7.1 (Form element)
+- Optional: `silverstripe/reports` (CMS report), `tractorcow/silverstripe-fluent` (multi-locale), `silverstripe/userforms` ^7.1 (Form element), `silverstripe-terraformers/keys-for-cache` ^3.0 (element cache keys), `wedevelopnl/silverstripe-admintoolbar` ^6.0 (Grid menu in the front-end admin toolbar)
