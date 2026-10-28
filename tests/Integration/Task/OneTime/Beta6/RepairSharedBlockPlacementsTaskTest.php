@@ -6,7 +6,9 @@ namespace WeDevelop\Grid\Tests\Integration\Task\OneTime\Beta6;
 
 use Page;
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 use SilverStripe\Dev\SapphireTest;
+use SilverStripe\i18n\i18n;
 use SilverStripe\ORM\DB;
 use SilverStripe\Versioned\Versioned;
 use Symfony\Component\Console\Command\Command;
@@ -226,5 +228,28 @@ final class RepairSharedBlockPlacementsTaskTest extends SapphireTest
         self::assertSame(1, $this->rowCount(self::REFERENCE_TABLE, (int) $reference->ID), 'draft row kept');
         self::assertSame(1, $this->rowCount(self::REFERENCE_TABLE, (int) $reference->ID, '_Live'), 'live row kept');
         self::assertStringNotContainsString('removed', $result['output']);
+    }
+
+    /** @return iterable<string, array{string, string}> */
+    public static function unclassifiableLiveOutputs(): iterable
+    {
+        yield 'English' => ['en_US', "Preview only: nothing is changed.\nLeft for manual review:\n"
+            . "  - %s #%d (published): its element row is missing, so its page cannot be told\n"];
+        yield 'Dutch' => ['nl_NL', "Alleen een voorbeeld: er wordt niets gewijzigd.\nHandmatig te beoordelen:\n"
+            . "  - %s #%d (gepubliceerd): de elementrij ontbreekt, dus de pagina is niet te bepalen\n"];
+    }
+
+    #[DataProvider('unclassifiableLiveOutputs')]
+    public function testNamesTheStageOfAnUnclassifiablePlacementInTheOutputLanguage(string $locale, string $output): void
+    {
+        $block = GridTreeFactory::sharedBlock();
+        $reference = GridTreeFactory::reference($this->page(), $block);
+        $reference->publishSingle();
+        DB::prepared_query(sprintf('DELETE FROM "%s_Live" WHERE "ID" = ?', self::ELEMENT_TABLE), [$reference->ID]);
+        $this->strand($block);
+
+        $result = i18n::with_locale($locale, fn (): array => $this->runTask(dryRun: true));
+
+        self::assertSame(sprintf($output, SharedBlockReference::class, $reference->ID), $result['output']);
     }
 }

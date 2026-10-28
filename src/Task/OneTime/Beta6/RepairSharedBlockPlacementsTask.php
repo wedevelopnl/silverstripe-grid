@@ -361,7 +361,7 @@ class RepairSharedBlockPlacementsTask extends BuildTask
         return _t(
             self::class . '.UNCLASSIFIABLE',
             '{class} #{id} ({stage}): its element row is missing, so its page cannot be told',
-            ['class' => SharedBlockReference::class, 'id' => $id, 'stage' => $stage],
+            ['class' => SharedBlockReference::class, 'id' => $id, 'stage' => $this->stagesLabel([$stage => true])],
         );
     }
 
