@@ -4,27 +4,19 @@ enabled: true
 event: file
 action: warn
 conditions:
-  - field: new_text
+  - field: content
     operator: regex_match
     pattern: public function __construct\(
   - field: file_path
     operator: regex_match
-    pattern: src/(Model|Extensions|Controllers)/.*\.php$
+    pattern: src/((Model|Extensions|Controllers|Migration/Model)/.*|UserForms/(UserFormElement|.*Extension))\.php$
 ---
 
 **Constructor Injection Warning — SilverStripe Limitation**
 
-Classes extending `AdminController`, `LeftAndMain`, `DataObject`, or `WeDevelop\Grid\Model\GridElement` **cannot use constructor injection**. SilverStripe instantiates these classes without DI arguments — constructor parameters will silently be `null`.
+Controllers, `DataObject`s (every grid element included) and extensions are instantiated by the framework without DI arguments, so a constructor parameter is never injected — the ORM even passes its record array as the first argument. Follow the SilverStripe Dependency Injection rules in CLAUDE.md (PHP Conventions):
 
-**Use property injection instead** (see the PHP Conventions in CLAUDE.md; `GridController` and `GridElement` show the pattern):
+- **Controllers and `DataObject`s**: `private static array $dependencies` property injection — see `GridController` and `GridElement`.
+- **Extensions**: `$dependencies` does not apply either; resolve the service in the method with `Injector::inst()->get()` and a comment saying why (`HierarchyValidationExtension`, `MediaExtension`).
 
-```php
-/** @var array<string, string> */
-private static array $dependencies = [
-    'myService' => '%$' . MyServiceInterface::class,
-];
-
-public MyServiceInterface $myService;
-```
-
-If this is a plain service class (not a Controller/DataObject/element), constructor injection is fine — but wire it explicitly in YAML with `constructor:` config.
+A plain service class may use constructor injection, wired explicitly in YAML with `constructor:` config.
