@@ -8,7 +8,7 @@ use SilverStripe\ORM\Connect\DBSchemaManager;
 use SilverStripe\ORM\DB;
 
 /**
- * Schema access for the one-time repair tasks, which read and write raw rows
+ * Schema access for the one-time upgrade tasks, which read and write raw rows
  * on every stage table and must skip a table a site does not have.
  */
 trait ReadsDatabaseSchema
