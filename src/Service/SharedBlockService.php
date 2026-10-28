@@ -11,6 +11,7 @@ use SilverStripe\Core\Validation\ValidationException;
 use SilverStripe\Core\Config\Config;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\Security\Permission;
+use SilverStripe\Security\Security;
 use SilverStripe\Versioned\Versioned;
 use TractorCow\Fluent\Model\Locale;
 use WeDevelop\Grid\Contract\ReorderValidatorInterface;
@@ -490,14 +491,19 @@ class SharedBlockService
     /**
      * The delete writes into every locale holding a placement, so a member
      * restricted to some locales would otherwise reach the others through it.
-     * Fluent's own rule for a cross-locale action applies: its multi-locale
-     * permission, or edit access in each locale concerned.
+     * They need Fluent's multi-locale permission, or the right to delete the
+     * block with each locale concerned active.
+     *
+     * Without a member (a task, project code outside a request) there is no
+     * editor whose locales could be restricted: the call goes through, as a
+     * bare delete() of the record does. The CMS form never gets here without
+     * one, since it requires canDelete() first.
      *
      * @param array<string, LocaleUsage> $usage
      */
     private function refuseUneditableLocales(SharedBlock $block, array $usage): ?ValidationError
     {
-        if (!$this->locales->isLocalised()) {
+        if (!$this->locales->isLocalised() || Security::getCurrentUser() === null) {
             return null;
         }
 

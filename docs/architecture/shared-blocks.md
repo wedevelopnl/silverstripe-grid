@@ -145,7 +145,7 @@ Both reach live without republishing the consuming pages.
 `SharedBlockService::delete()` owns the whole operation, inside one `Transactional::run()`:
 
 1. Read what each locale holds of the block — placements on draft and live, the root, the consuming pages.
-2. Refuse (`LOCALE_PERMISSION`, naming the locale titles) unless the member holds `Fluent_Actions_MultiLocale` or passes `SharedBlock::canDelete()` with each placing locale active. Fluent filters a member's groups by the active locale, so `Permission::reset()` runs before each check. Nothing has been written yet.
+2. Refuse (`LOCALE_PERMISSION`, naming the locale titles) unless the member holds `Fluent_Actions_MultiLocale` or passes `SharedBlock::canDelete()` with each placing locale active. Fluent filters a member's groups by the active locale, so `Permission::reset()` runs before each check. A call without a current member (a task, project code outside a request) is not checked, as a bare `delete()` is not; `SharedBlockItemRequest` requires `canDelete()` before it calls the service. Nothing has been written yet.
 3. `Unshare`: in each locale, copy that locale's root onto that locale's placements. A locale with placements but no root gets no copy; its placements go with the block.
 4. Archive the block record.
 5. Write a draft version of each consuming page, in the locale whose placement changed.
