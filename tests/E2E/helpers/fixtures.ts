@@ -27,7 +27,9 @@ export function loadFixture(
 }
 
 /**
- * Reset all E2E fixture data (removes pages with 'e2e-' URL prefix).
+ * Reset the dev database: deletes every record of FixtureLoader.purge_classes
+ * (Page, GridElement, SharedBlock and their subclasses, see _config/dev.yml)
+ * on both stages — not just fixture data.
  */
 export function resetFixtures(request: APIRequestContext): Promise<void> {
   return client.reset(request)

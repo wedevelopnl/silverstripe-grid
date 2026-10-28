@@ -113,8 +113,9 @@ export function filterSiblings(
 }
 
 /**
- * Returns only parent-type containers for the active draggable.
- * For sections (parent = 'root'), returns containers with unparseable IDs.
+ * Returns only parent-type containers for the active draggable, on the
+ * active item's side of any shared-block boundary.
+ * For sections (parent = 'page'), returns containers with unparseable IDs.
  */
 export function filterParentContainers(
   activeId: string,
