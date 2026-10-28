@@ -485,6 +485,22 @@ final class SharedBlockServiceTest extends SapphireTest
         self::assertNull(SharedBlock::get()->byID($block->ID));
     }
 
+    public function testUnpublishKeepsThePlacementsSoRepublishingRestoresThem(): void
+    {
+        // Unpublishing deletes the block from live only, which fires the same
+        // onBeforeDelete() as a delete; its placements are page content.
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $block = $this->sectionRootedBlock();
+        $reference = GridTreeFactory::reference($page, $block);
+        self::assertTrue($this->service->setPublished($block, true)->isOk());
+        $reference->publishSingle();
+
+        self::assertTrue($this->service->setPublished($block, false)->isOk());
+
+        self::assertNotNull(SharedBlockReference::get()->byID($reference->ID), 'draft placement kept');
+        self::assertTrue($reference->isPublished(), 'live placement kept');
+    }
+
     public function testDeleteInRemoveModeArchivesBlockAndPlacements(): void
     {
         $page = $this->objFromFixture(Page::class, 'test_page');
