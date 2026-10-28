@@ -19,8 +19,8 @@ The DnD system takes **completely different paths** for same-container and cross
 | Drop placement | **Index-based** (no direction detection) | **Direction-based** (pointer vs element center) |
 | Coordinate space risk | Low (no CSS transform divergence) | **High** (DOM vs dnd-kit vs viewport) |
 | `overRectRef` captured? | Yes | Yes — `handleDragMove` reads the live node for the preview direction; the drop-end fallback still pairs `getPointerPosition()` with `over.rect` (pre-transform, may lag the pending-tree re-render) |
-| API payload | Same parentId, new sort position | New parentId + afterElementID |
-| Code path in resolveDropPlacement | Lines 58-67 (index branch) | Lines 69-85 (direction branch) |
+| API payload (`{element, parent, after}`, all `NodeRef`) | Same `parent`, new `after` predecessor | New `parent` + `after` |
+| Code path in resolveDropPlacement | `sourceParentKey === targetParentKey` branch (index) | its `else` branch (direction via `resolveInsertDirection`) |
 
 **This split is the first question to answer when investigating any DnD bug**: is it a same-container or cross-container move? The answer narrows the search space immediately.
 
@@ -84,7 +84,7 @@ When you see a symptom, start here.
 | **Drop silently fails (no reorder)** | Either `over` is null at drop time, or `over` degraded to the active element's OWN parent container — `resolveDropPlacement`'s container branch then appends at the end, which for an element already last is a no-op | Check `hadSiblingHit` fallback, source depletion handling, pointer-inside-source guard. If `over` is a container, check tier 3's lost-lock recovery: auto-scroll can shift `droppableRects` past `MARGIN_Y` and drop the sibling lock | `collisionDetection.ts` (factory closure state, tier 3), `resolveDropPlacement.ts` (container branch) |
 | **Element snaps to wrong container** | Parent-container fallback biased by `closestCenter` | Is containment-first check working? Is pointer inside a parent rect? | `collisionDetection.ts` (tier 3) |
 | **Cross-container drag doesn't show element in target** | Pending tree not applied | Is `handleDragOver` detecting the cross-container move? Is `applyPendingMove` called? | `useDragAndDrop.ts` (handleDragOver), `usePendingTree.ts` |
-| **Backend rejects a valid move** | Hierarchy validation too strict | Check `ContainerType::isChildAllowed()` and `ReorderValidator::checkHierarchyRules()` | `ContainerType.php`, `ReorderValidator.php` |
+| **Backend rejects a valid move** | Hierarchy validation too strict, or a shared-block boundary / empty block | Check `ContainerType::isChildAllowed()`, `ReorderValidator::validate()` (`SHARED_BOUNDARY`, `BLOCK_EMPTY`) and `PlacementRulesTrait::checkPlacementRules()` | `src/Value/ContainerType.php`, `src/Validation/ReorderValidator.php`, `src/Validation/PlacementRulesTrait.php` |
 | **Optimistic update doesn't rollback on error** | Snapshot not captured or not restored | Is `onMutate` returning snapshot? Is `onError` calling `setQueryData(snapshot)`? | `useElementMutations.ts` |
 | **E2E test flaky — works sometimes** | Missing settlement wait between operations | Is `waitForMutationSettlement()` called after each drop? Are there enough pointer steps (20+)? | `tests/E2E/helpers/drag.ts`, the failing spec |
 | **Cross-zone drag succeeds (shouldn't)** | Zones share a `DndContext` | Each zone should have its own `GridEditorField` and `DndContext` | `GridEditorField`, component tree |
@@ -108,7 +108,8 @@ User drags element
        │                    drop animation measures the destination — see invariant #8)
        └─ onReorder → TanStack Query mutation
             ├─ onMutate: snapshot → applyReorder → setQueryData → clearPendingTree
-            ├─ PATCH /api/reorder → ReorderValidator → ReorderExecutor
+            ├─ PATCH /api/reorder → GridController::apiReorder → ElementPlacementService::reorder
+            │                       (ReorderValidator::validate → splice + reindex Sort)
             ├─ onError: clearPendingTree (safety net) → restore snapshot → toast
             └─ onSettled: invalidateQueries (refetch authoritative tree)
 ```
@@ -172,23 +173,23 @@ When dragging the **only** item from a container, `sourceContainerItemsRef` beco
 
 ### The `clearPendingTree` safety net
 
-`clearPendingTree` is called in both `onMutate` (line 114, normal path) and `onError` (line 121, safety net). The `onError` call handles the edge case where `onMutate` throws before reaching its own `clearPendingTree` (e.g., if `cancelQueries` fails). Since `clear()` is idempotent, calling it twice is harmless.
+`clearPendingTree` is called in both `onMutate` (normal path, right after `setQueryData`) and `onError` (safety net) of `useReorderElement` in `useElementMutations.ts`. The `onError` call handles the edge case where `onMutate` throws before reaching its own `clearPendingTree` (e.g., if `cancelQueries` fails). Since `clear()` is idempotent, calling it twice is harmless.
 
 ## Direction-Aware Drop Placement
 
 - `resolveInsertDirection()` compares pointer vs element center
 - **The axis is geometric, not type-based** (`resolveDropAxis`): a target spanning ≥ 95% of its parent container's content width (nearest `[data-dnd-container]` ancestor) compares on **Y** (above/below); narrower targets compare on **X** (left/right). Sections, rows, and content elements always render full-width → Y; only columns vary — a 12/12 column gets Y, narrower columns get X. Measurement failure (no live node / no marked ancestor / zero-width wrapper) degrades to the legacy type rule: column → X, else Y.
 - **Same-container moves skip direction entirely** — index-based placement from SortableContext
-- Cross-container moves compute `afterElementID` via direction + `resolveReorderParams()`
-- The `afterElementID` API contract (null = first position) replaced an ambiguous index-based API
+- Cross-container moves compute the insertion index via direction; `resolveReorderParams()` turns it into the `after` anchor
+- The `after` API contract (the predecessor's `NodeRef`, null = first position) replaced an ambiguous index-based API
 
 ## Zone Isolation
 
-Zone isolation is **implicit**: each zone renders its own `DndContext`, making cross-zone drags geometrically impossible. The backend enforces zone boundaries if a direct API call bypasses the frontend (HTTP 422).
+Zone isolation is **implicit**: each zone renders its own `DndContext`, making cross-zone drags geometrically impossible. The reorder payload carries no zone either: a moved element keeps its own `Zone`, and `ElementPlacementService` scopes the page-root sibling sequence to it, so a direct API call cannot move an element into another zone.
 
 ## Backend
 
-The reorder pipeline (`ReorderValidator → ReorderExecutor → ElementPersistenceService`) returns `Result` objects — `Result::ok()` / `Result::fail()`, never exceptions for validation failures. Frontend type filtering prevents most invalid drops, but hierarchy rules (Section cannot go inside Column) are enforced server-side only. On rejection, `onError` restores the snapshot (instant rollback), and `onSettled` refetches (authoritative confirmation).
+The reorder pipeline (`GridController::apiReorder` → `ElementPlacementService::reorder()` → `ReorderValidator::validate()` + `PlacementRulesTrait::checkPlacementRules()`) returns `Result` objects — `Result::ok()` / `Result::fail()`, never exceptions for validation failures; the controller maps a failure to HTTP 422. Frontend type filtering prevents most invalid drops, but hierarchy rules (Section cannot go inside Column) are enforced server-side only — see the Hierarchy Validation rules in CLAUDE.md. On rejection, `onError` restores the snapshot (instant rollback), and `onSettled` refetches (authoritative confirmation).
 
 ## File Map
 
@@ -198,16 +199,17 @@ The reorder pipeline (`ReorderValidator → ReorderExecutor → ElementPersisten
 | `client/src/js/hooks/usePendingTree.ts` | Pending tree state + `CollisionRefs` for cross-container drags |
 | `client/src/js/utils/collisionDetection.ts` | 3-tier collision detection, type filtering, `centerCrossing`, `closestCenterLive` |
 | `client/src/js/utils/applyReorder.ts` | Pure immutable tree mutation for optimistic updates |
-| `client/src/js/utils/resolveDropPlacement.ts` | Same-container: index (L58-67) / Cross-container: direction (L69-85) |
+| `client/src/js/utils/resolveDropPlacement.ts` | Same-container: index branch / Cross-container: direction branch / over a container: append at end |
 | `client/src/js/utils/resolveInsertDirection.ts` | Pointer vs rect center on a given `DropAxis` → `'before' \| 'after'` |
 | `client/src/js/utils/resolveDropAxis.ts` | Rendered-geometry axis decision (full-width → Y, narrower → X; legacy type rule as degraded fallback) |
-| `client/src/js/utils/resolveReorderParams.ts` | dnd-kit context → API payload (`afterElementID`) |
-| `client/src/js/hooks/useElementMaps.ts` | O(1) lookup maps: `nodeMap`, `childrenByParentId` |
+| `client/src/js/utils/resolveReorderParams.ts` | dnd-kit context → API payload (`{element, parent, after}`) |
+| `client/src/js/hooks/useElementMaps.ts` | O(1) lookup maps: `nodeMap`, `childrenByParentKey`, `indexByNodeKey` |
 | `client/src/js/hooks/useElementMutations.ts` | TanStack Query mutation: optimistic update, rollback, toast |
 | `client/src/js/types/dnd.ts` | Composite IDs (`type-numericId`), `PARENT_CONTAINER_TYPE` hierarchy |
 | `client/src/js/components/GridEditor/EditableGridEditor.tsx` | `DndContext` owner (`effectiveData`/pending-tree wiring now lives in `client/src/js/components/GridEditor/useGridEditorDnd.ts`) |
-| `src/Validation/ReorderValidator.php` | Hierarchy enforcement via `ContainerType::isChildAllowed()` |
-| `src/Service/ReorderExecutor.php` | Sort calculation, dirty tracking, cross-parent reindex |
+| `src/Controllers/GridController.php` | `apiReorder`: parses the body, permission checks, calls the placement service |
+| `src/Validation/ReorderValidator.php` | Same-parent short-circuit, shared-block boundary, then the shared `PlacementRulesTrait` rules (`ContainerType::isChildAllowed()`) |
+| `src/Service/ElementPlacementService.php` | Sort calculation, dirty tracking, cross-parent reindex (zone-scoped at page root) |
 
 ## References
 
@@ -220,7 +222,7 @@ The reorder pipeline (`ReorderValidator → ReorderExecutor → ElementPersisten
 Read `references/collision-detection.md` first. Modify `filterSiblings()`/`filterParentContainers()` for type-level constraints, or add logic within `centerCrossing`/the factory closure for behavior constraints.
 
 ### Changing drop placement logic
-Check which code path (same-container or cross-container) is affected — they branch at `resolveDropPlacement.ts` line 58. The axis (X vs Y) is decided by `resolveDropAxis` from rendered geometry and passed into `resolveInsertDirection`; both call sites (`handleDragMove` preview, `handleDragEnd` fallback) must derive it from the same live node. Always test both paths separately.
+Check which code path (same-container or cross-container) is affected — they branch on `sourceParentKey === targetParentKey` in `resolveDropPlacement()`. The axis (X vs Y) is decided by `resolveDropAxis` from rendered geometry and passed into `resolveInsertDirection`; both call sites (`handleDragMove` preview, `handleDragEnd` fallback) must derive it from the same live node. Always test both paths separately.
 
 ### Adding a new sortable level
 1. Add type to `DraggableType` and `PARENT_CONTAINER_TYPE` in `dnd.ts`

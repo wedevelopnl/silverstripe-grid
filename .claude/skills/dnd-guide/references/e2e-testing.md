@@ -58,16 +58,16 @@ Wrapper: `startDrag` + immediate `release()`. Use for simple drags without mid-d
 
 Completes a drag by releasing at viewport coordinate `(x, y)`. Dispatches a genuine `pointerup` `PointerEvent` at that coordinate before calling `page.mouse.up()` — **never complete a drop with raw `page.mouse.up()`**. Playwright's Firefox driver does not deliver the `pointerup` from `page.mouse.up()` to the page after a synthetic drag (the page sees `pointerdown` and every `pointermove`, but never the release), and dnd-kit's `PointerSensor` listens for that `pointerup` on the document to end the drag. Without the dispatched event, `onDragEnd` never fires on Firefox: no reorder request, DragOverlay stays mounted. The dispatched event runs the sensor's real handler, resolving the drop from the `over` established by the preceding `pointermove`s — the same product code path a real release produces. `page.mouse.up()` still follows to reset Playwright's button state; on engines that already delivered the native release it's a harmless no-op.
 
-### `waitForMutationSettlement(page)`
+### `waitForMutationSettlement(page, label)`
 
-Registers response listeners for the reorder mutation lifecycle and returns an async settle function. **Must be called BEFORE the action that triggers the mutation** (the drag release) — it registers `page.waitForResponse` listeners that would miss the response if attached after the request already resolved. Calling the returned settle function:
+Registers response listeners for the reorder mutation lifecycle and returns an async settle function. **Must be called BEFORE the action that triggers the mutation** (the drag release) — it registers `page.waitForResponse` listeners that would miss the response if attached after the request already resolved. `label` names the drop in the failure message (each wait rejects after 10s, saying whether the drop fired any PATCH at all), so a spec with several drops reports which one hung. Calling the returned settle function:
 1. Awaits the PATCH `/api/reorder` response (success)
 2. Awaits the GET `/api/readTree/` refetch (success)
 3. Pauses 500ms for TanStack Query's cache update, React's reconciliation, and dnd-kit re-registering its droppable rects — an internal step with no DOM end-state to assert on
 
-### `dropAndSettle(page, targetX, targetY)`
+### `dropAndSettle(page, targetX, targetY, label)`
 
-Combines the final positioning move, mouse release, and API round-trip wait into one call for cross-container drop tests. Takes final viewport coordinates (not locators — call after a prior `activateDragByTitle`/`enterContainerCenter` has already established the mid-drag pointer position). Sequence: move 15 steps to `(targetX, targetY)` → wait for the ghost preview to stop re-rendering via `waitForPreviewStable` (module-private: a `MutationObserver` on the grid editor that resolves after 200ms of no structural mutation, 2s backstop) → register `waitForMutationSettlement` → `releaseDrag(page, targetX, targetY)` → await the settle function.
+Combines the final positioning move, mouse release, and API round-trip wait into one call for cross-container drop tests. Takes final viewport coordinates (not locators — call after a prior `activateDragByTitle`/`enterContainerCenter` has already established the mid-drag pointer position) and a `label` passed through to `waitForMutationSettlement`. Sequence: move 15 steps to `(targetX, targetY)` → wait for the ghost preview to stop re-rendering via `waitForPreviewStable` (module-private: a `MutationObserver` on the grid editor that resolves after 200ms of no structural mutation, 2s backstop) → register `waitForMutationSettlement(page, label)` → `releaseDrag(page, targetX, targetY)` → await the settle function.
 
 The `waitForPreviewStable` step is load-bearing, not a cosmetic pause: the drop commits whatever slot the pending-tree preview currently shows, so releasing mid-re-render would commit an intermediate position. It is condition-based (observes structural DOM mutations, ignores the DragOverlay's transform), which is why it is robust across browser timings where Firefox re-renders slower than Chromium.
 
@@ -140,14 +140,14 @@ test('moves elements across containers', async ({ page }) => {
   await activateDragByTitle(page, 'Element A1', { overlayTestId: 'drag-overlay-element' });
   await enterContainerCenter(page, colB, 'element-card', 4);
   const pos1 = await elPosition(colB, { before: 'Element B1' });
-  await dropAndSettle(page, pos1.x, pos1.y);
+  await dropAndSettle(page, pos1.x, pos1.y, 'A1 → B before-first');
   await expect(colB.getByTestId('element-card-title')).toHaveText([/* ... */]);
 
   // Operation 2: Reverse (B→A), between
   await activateDragByTitle(page, 'Element B3', { overlayTestId: 'drag-overlay-element' });
   await enterContainerCenter(page, colA, 'element-card', 3);
   const pos2 = await elPosition(colA, { between: ['Element A2', 'Element A3'] });
-  await dropAndSettle(page, pos2.x, pos2.y);
+  await dropAndSettle(page, pos2.x, pos2.y, 'B3 → A between A2 and A3');
   await expect(colA.getByTestId('element-card-title')).toHaveText([/* ... */]);
 
   // Final: Verify persistence

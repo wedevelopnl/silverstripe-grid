@@ -19,13 +19,14 @@ Do NOT use inline string literals for TanStack Query cache keys. A typo in a str
 **Use the `queryKeys` factory instead:**
 
 ```typescript
-import { queryKeys } from '@/hooks/queryKeys';
+import { queryKeys, treeQueryKey } from '@/hooks/queryKeys';
 
-// Correct
-queryClient.invalidateQueries({ queryKey: queryKeys.elementTree(pageId) });
+// Correct — the editor's tree, whether page- or shared-block-rooted
+queryClient.invalidateQueries({ queryKey: treeQueryKey(root) });
+queryClient.invalidateQueries({ queryKey: queryKeys.sharedBlocks.all() });
 
 // Wrong — typo risk, no type safety
-queryClient.invalidateQueries({ queryKey: ['elementTree', pageId] });
+queryClient.invalidateQueries({ queryKey: ['elementTree', pageId, zone] });
 ```
 
-See `client/src/hooks/queryKeys.ts` for all available key factories.
+See `client/src/js/hooks/queryKeys.ts` for all available key factories. Anything touching an editor tree goes through `treeQueryKey(root)`, never `queryKeys.elementTree` directly — the library editor renders `sharedBlocks.tree`.

@@ -80,7 +80,7 @@ See the [E2E fixture protocol](docs/testing/e2e-fixtures.md) for the YAML fixtur
 
 | Command | Description |
 |---------|-------------|
-| `task qa` | **Full QA suite, run this before pushing.** PHPStan (plus a PHP 8.5 pass), Rector dry-run, class-leak, PHP coverage, Biome lint, format check, typecheck, Vitest, and the Vite build — in parallel |
+| `task qa` | **Full QA suite, run this before pushing.** PHPStan (plus a PHP 8.5 pass), Rector dry-run, class-leak, PHP coverage, Biome lint, format check, typecheck, the i18n parity check, the icon-class check, Vitest, and the Vite build — in parallel |
 | `task qa-js` | JS-only QA (Biome, format check, typecheck, Vitest, Vite build) |
 | `task analyse` | PHPStan static analysis (level max + Silverstan, 100% type coverage) |
 | `task rector-dry` / `task rector` | Preview / apply Rector refactorings |
@@ -153,8 +153,9 @@ CI runs the same suite, plus `npm run i18n:check` and a check that the committed
 1. Fork the repository and branch from `6` — the active development branch, **not** `main`
 2. Make your changes following the standards above
 3. Add or update tests. E2E-visible changes should come with a Playwright spec.
-4. Run `task qa` locally; CI runs the same suite
-5. Write a clear PR description explaining what changed and why
+4. A change to the model, the routes or the validation rules updates [`docs/architecture/`](docs/architecture/) and the `.claude/` agent, skill and hookify files in the same change — nothing checks them automatically, and agents follow them as written.
+5. Run `task qa` locally; CI runs the same suite
+6. Write a clear PR description explaining what changed and why
 
 For major changes, open an issue first to discuss the approach.
 

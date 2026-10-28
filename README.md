@@ -20,13 +20,13 @@ Elemental-style modules give editors a flat list of blocks and leave layout to t
 
 ```
 Page
-└── Section          zone-scoped band; the only thing allowed at page level
+└── Section          zone-scoped band; with section-rooted shared blocks, the only thing allowed at page level
     └── Row          horizontal group
         └── Column   carries width / offset / visibility per viewport
             └── Content block   HTML or media (shipped), or your own
 ```
 
-Writing a Section automatically creates the Row and Column beneath it, so a new section is usable immediately. Sections carry a **zone** (`main`, `sidebar`, …), which is how one page can host several independent grids.
+Writing a Section automatically creates the Row and Column beneath it, so a new section is usable immediately. Everything at page level — Sections and shared-block placements — carries a **zone** (`main`, `sidebar`, …), which is how one page can host several independent grids.
 
 That same tree in the editor — a section holding a centred 8-of-12 intro row above a row of three 4-column cards:
 
@@ -54,6 +54,8 @@ Optional:
 - `silverstripe/reports` — adds the Grid Elements and Shared Blocks reports to CMS Reports
 - `tractorcow/silverstripe-fluent` — multi-locale support, one isolated grid per locale ([guide](docs/fluent.md))
 - `wedevelopnl/silverstripe-admintoolbar` — adds a Grid menu to the front-end admin toolbar, mapping the page's grid with edit links ([guide](docs/usage/templates.md#admin-toolbar-menu))
+- `silverstripe/userforms` (^7.1) — adds a Form grid element: a CMS-built form whose fields, recipients and submissions belong to the block ([guide](docs/usage/userforms.md))
+- `silverstripe-terraformers/keys-for-cache` (^3.0) — gives every grid element a cache key that follows its content, for `<% cached %>` blocks ([guide](docs/usage/keys-for-cache.md))
 
 > **Conflict:** this module conflicts with `dnadesign/silverstripe-elemental` and replaces its functionality. Coming from Elemental? See the [migration guide](docs/migration.md).
 

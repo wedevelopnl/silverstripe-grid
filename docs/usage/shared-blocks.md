@@ -136,7 +136,7 @@ Shared blocks follow the same model as the rest of the module — no second loca
 - The block **record** is a single cross-locale row. Its title is admin labelling.
 - The block's **subtree** is locale-isolated. Locale X's version of a block is the content with that locale's ID hanging off it. Editing a block in one locale changes every page in that locale and no other.
 - **Placements** are per-locale page content, and every locale's placement points at the same block.
-- **Copying a page** to a locale copies its placements, not the block's subtree — the new locale points at the same block.
+- **Copying a page** to a locale copies its placements — still pointing at the same block — and gives every block it places content in the target locale if it has none. That copy never overwrites an existing translation, and it is cross-page: every other page in that locale placing the block starts rendering it too.
 - **Copying a block** to a locale clones its subtree into that locale.
 - A placement whose block has no content in the current locale renders empty.
 - **Deleting a locale** removes that locale's block subtrees and that locale's placements. The block record itself survives.

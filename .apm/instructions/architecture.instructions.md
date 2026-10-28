@@ -6,13 +6,13 @@ applyTo: "**/*"
 # Architecture
 
 ```
-_config/              # YAML config (DI bindings, element hierarchy, grid adapter)
+_config/              # YAML config (DI bindings incl. the hierarchy validators, grid adapter, optional-module integrations)
 templates/            # SilverStripe .ss templates (element holders + form fields)
 src/                  # PHP source (PSR-4: WeDevelop\Grid\)
 src/Adapter/          # Grid framework adapters: GridAdapter base class + framework presets (Bootstrap, Tailwind)
-src/Contract/         # Interfaces (GridAdapterInterface, ContentLayoutAdapterInterface, ContainerInterface, ReorderValidatorInterface)
+src/Contract/         # Interfaces (GridAdapterInterface, ContentLayoutAdapterInterface, ContainerInterface, ReorderValidatorInterface, UnavailableElementInterface)
 src/Controllers/      # API controllers: GridApiController (abstract base — CSRF gate, draft lookups, NodeRef resolution) + GridController (page elements, /admin/grid) + SharedBlockController (block library, /admin/grid-shared-blocks)
-src/Factory/          # Factories (GridAdapterFactory)
+src/Factory/          # Factories (GridAdapterFactory, GridAdapterResolver — selects the adapter from SS_GRID_ADAPTER)
 src/Model/            # Element models (GridElement, Section, Row, Column, ContentElement, MediaElement, SharedBlock, SharedBlockReference) + ContainerElementTrait + GridZoneList (`$GridZone`'s self-rendering root list)
 src/Extensions/       # SilverStripe extensions (GridPageExtension, MediaExtension + its side-by-side subclass BlockMediaExtension, FluentGridPageExtension, FluentSharedBlockExtension)
 src/Forms/            # Form field implementations (GridEditorField, GridAwareVersionFormFactory) + the library's GridField add control (GridFieldAddSharedBlockButton) and its detail-form handler (SharedBlockItemRequest — the two delete actions)
@@ -22,9 +22,9 @@ src/AdminToolbar/     # Optional wedevelopnl/silverstripe-admintoolbar integrati
 src/UserForms/          # Optional silverstripe/userforms integration (UserFormElement — trait_exists()-guarded, inert stand-in declared when userforms is absent; UserFormRouteExtension + UserFormElementController serve /{page}/grid-form/{id}; UserFormElementResolver; SubmittedFormHostPageExtension + UserFormEmailDataExtension record the host page). Config: _config/userforms.yml (classexists-guarded)
 src/Reports/          # CMS reports (GridElementReport, SharedBlockReport)
 src/Value/            # Value objects, DTOs, and request objects (NodeRef, NodeType, ElementStatus, GridNode, Result, MigrationIdMap, ...)
-src/Service/          # Domain services (GridTreeService, GridNodeMapper, ElementPlacementService, GridElementService, GridSettingsService, GridSettingsResolver, TitleGenerator, RequestBodyParser, ColumnClassResolver, GridAwareDeleteLocalisationPolicy, SharedBlockService, SharedBlockUsageResolver, LocalisedSubtreeCloner, SharedBlockLocaliser, GridZoneResolver)
-src/Task/OneTime/     # One-time upgrade tasks, namespaced per release (Beta4\BackfillGridZoneTask — the Zone hoist back-fill; Beta5\RepairGridZoneTask — repairs rows breaking the Zone invariant, refuses to run before the back-fill)
-src/Validation/       # Write-time + reorder-time validation (HierarchyValidationExtension, HierarchyValidationService, HierarchyValidatorInterface, ReorderValidator, GridSettingsFieldValidator)
+src/Service/          # Domain services (GridTreeService, GridNodeMapper, ElementPlacementService, GridElementService, GridSettingsService, GridSettingsResolver, TitleGenerator, RequestBodyParser, ColumnClassResolver, GridAwareDeleteLocalisationPolicy, SharedBlockService, SharedBlockUsageResolver, LocalisedSubtreeCloner, SharedBlockLocaliser, LocaleScope — runs an operation in every Fluent locale, GridZoneResolver)
+src/Task/OneTime/     # One-time upgrade tasks, namespaced per release (Beta4\BackfillGridZoneTask — the Zone hoist back-fill; Beta5\RepairGridZoneTask — repairs rows breaking the Zone invariant, refuses to run before the back-fill; Beta6\RepairSharedBlockPlacementsTask — removes placements whose block is gone, every stage and locale)
+src/Validation/       # Write-time + reorder-time validation (HierarchyValidationExtension, HierarchyValidationService, HierarchyValidatorInterface, ReorderValidator, PlacementRulesTrait — the rules both share, GridSettingsFieldValidator)
 src/Exception/        # Domain exceptions (GridDomainException, InvalidGridValueException)
 src/ORM/FieldType/    # Custom DB field types (DBGridSettings composite field)
 src/Repository/       # Repository interfaces + ORM implementations (GridElementRepositoryInterface, OrmGridElementRepository)
@@ -59,8 +59,8 @@ phpstan/stubs/        # PHPStan stubs (e.g. AdminController.stub)
 .github/workflows/    # CI: ci.yml (js-qa, static-analysis, php-qa matrix, e2e matrix) + relock.yml (weekly harness lock refresh)
 .docker/              # Docker dev env: Caddy + PHP + MySQL 8
 .docker/app/src/      # Harness-owned page types (App\MultiZonePage — the E2E multi-zone page); COPYed to /app/src at image build
-docs/                 # User documentation; docs/README.md is the index
-docs/usage/           # Usage guides (grid-editor, shared-blocks, custom-elements, templates, i18n)
+docs/                 # User documentation; docs/README.md is the index; fluent.md, migration.md at top level
+docs/usage/           # Usage guides (grid-editor, shared-blocks, custom-elements, templates, i18n, keys-for-cache, userforms)
 docs/architecture/    # Architecture documents (backend, drag-and-drop, grid-adapter, shared-blocks)
 docs/testing/         # Testing protocol docs (e2e-fixtures)
 docs/images/          # Generated doc screenshots — regenerate, never hand-edit

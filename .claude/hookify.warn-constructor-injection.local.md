@@ -9,21 +9,22 @@ conditions:
     pattern: public function __construct\(
   - field: file_path
     operator: regex_match
-    pattern: (Elements|Extensions|Controllers)/.*\.php$
+    pattern: src/(Model|Extensions|Controllers)/.*\.php$
 ---
 
 **Constructor Injection Warning — SilverStripe Limitation**
 
-Classes extending `AdminController`, `LeftAndMain`, `DataObject`, or `BaseElement` **cannot use constructor injection**. SilverStripe instantiates these classes without DI arguments — constructor parameters will silently be `null`.
+Classes extending `AdminController`, `LeftAndMain`, `DataObject`, or `WeDevelop\Grid\Model\GridElement` **cannot use constructor injection**. SilverStripe instantiates these classes without DI arguments — constructor parameters will silently be `null`.
 
-**Use property injection instead:**
+**Use property injection instead** (see the PHP Conventions in CLAUDE.md; `GridController` and `GridElement` show the pattern):
 
 ```php
+/** @var array<string, string> */
 private static array $dependencies = [
-    'MyService' => '%$' . MyServiceInterface::class,
+    'myService' => '%$' . MyServiceInterface::class,
 ];
 
-public MyServiceInterface $MyService;
+public MyServiceInterface $myService;
 ```
 
-If this is a plain service class (not a Controller/DataObject/Element), constructor injection is fine — but wire it explicitly in YAML with `constructor:` config.
+If this is a plain service class (not a Controller/DataObject/element), constructor injection is fine — but wire it explicitly in YAML with `constructor:` config.

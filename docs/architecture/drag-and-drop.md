@@ -49,7 +49,7 @@ The drag-and-drop system enables visual reordering of elements within the grid e
 
 ### Node Identity
 
-Every node carries a scoped identity shaped as `NodeRef = { type: NodeType, id: number }` where `NodeType` is one of `page | section | row | column | element`. A page's ID and an element's ID can collide — they come from independent auto-increment sequences — so every map, every dnd-kit draggable, every API payload pairs the numeric id with its type.
+Every node carries a scoped identity shaped as `NodeRef = { type: NodeType, id: number }` where `NodeType` is one of `page | section | row | column | element | sharedBlock` (`sharedBlock` only as the tree root of the library editor). A page's ID and an element's ID can collide — they come from independent auto-increment sequences — so every map, every dnd-kit draggable, every API payload pairs the numeric id with its type.
 
 The flat-string form is `NodeKey = '${type}-${id}'` (e.g. `row-42`, `column-17`). Helpers live in `client/src/js/types/identity.ts` under the `NodeIdentity` namespace: `toKey`, `fromKey`, `equals`. Every composite ID dnd-kit sees is a `NodeKey`.
 
@@ -59,7 +59,7 @@ The API returns a flat list of root-level nodes plus an explicit root parent ide
 
 ```ts
 interface TreeApiResponse {
-  rootParent: NodeRef;           // always { type: 'page', id: <pageId> } for the current API
+  rootParent: NodeRef;           // { type: 'page', id } in the page editor; { type: 'sharedBlock', id } in the library editor
   nodes: ElementNode[];          // root sections for the zone
 }
 ```
@@ -78,7 +78,7 @@ Every node carries:
 - `self: NodeRef` — the canonical identity of this node
 - `parent: NodeRef` — the identity of its parent
 - `nodeKey: NodeKey` / `parentKey: NodeKey` — precomputed string forms for Map/Set keys and dnd-kit IDs
-- `id: number` — bare numeric ID, safe only for the GridElement-only endpoints (publish, unpublish, delete, duplicate, updateGridSettings) that query `GridElement::get()` exclusively. Never use as a map key.
+- `id: number` — bare numeric ID. Every mutation endpoint takes a `NodeRef` (`self`), not this; never use it as a map key.
 
 Container nodes additionally carry `containerType`, `allowedTypes`, and `children`. Column nodes carry `gridSettings`.
 
@@ -221,15 +221,17 @@ Controller (HTTP concerns)
         └── GridElementRepositoryInterface (sibling loads — injected)
 ```
 
-`ElementPlacementService` owns all three phases directly. It has two entry points with identical pipelines: `reorder()` for already-placed elements and `insertAfter()` for newly-written ones (used by `GridElementService` after creating or duplicating an element). Validation delegates to the injected `ReorderValidatorInterface`; sort calculation happens inline via private helpers (`filterByZone`, `excludeElement`, `resolveInsertionIndex`, `reindex`); persistence goes through `persistAndReturn()`, which wraps the writes in a `DB::get_conn()->withTransaction()` and `WriteResult::from()` to translate any thrown `ValidationException` into `Result::fail()`. The service communicates with callers exclusively via the `Result` pattern.
+`ElementPlacementService` owns all three phases directly. It has two entry points with identical pipelines: `reorder()` for already-placed elements and `insertAfter()` for newly-written ones (used by `GridElementService` after creating or duplicating an element). Validation delegates to the injected `ReorderValidatorInterface`; sort calculation happens inline via private helpers (`siblingSequence`, `excludeElement`, `resolveInsertionIndex`, `reindex`); persistence goes through `persistAndReturn()`, which wraps the writes in a `DB::get_conn()->withTransaction()` and `WriteResult::from()` to translate any thrown `ValidationException` into `Result::fail()`. The service communicates with callers exclusively via the `Result` pattern.
 
 ### Phase 1: Validation
 
 `ReorderValidator::validate()` short-circuits to `Result::ok()` when the element's current parent (`ParentID` + `ParentClass`) already equals the target parent — a same-parent reorder cannot change the hierarchy, so no rule check runs.
 
-Cross-parent moves delegate to the target parent's `ContainerType` and check two things:
-1. **`canBeRoot()`** — if the target parent is a page (`SiteTree`), the element's container type must be allowed at root level (only `Section` is)
-2. **`isChildAllowed($element::class)`** — the target container must accept this element type (Section→Row, Row→Column, Column→any non-container element)
+Before that, a shared-block placement whose block has no root fails `BLOCK_EMPTY`. Cross-parent moves then check:
+1. **Shared boundary** — source and target must sit in the same shared context (both on the page, or both inside the same block), else `SHARED_BOUNDARY`
+2. **`PlacementRulesTrait::checkPlacementRules()`** — the write-time rules, judged by the element's effective class (`getPlacementClass()`: a placement counts as its block's root class): no placement inside a shared context (`SHARED_NESTING`); at page level `canBeRoot()` (Sections and section-rooted placements); in a container `isChildAllowed()` (Section→Row, Row→Column, Column→any non-container element)
+
+See [Shared blocks — Validation](shared-blocks.md#validation).
 
 Validation returns `Result::fail()` with structured errors on violation. No database writes or in-memory mutations occur.
 
@@ -238,7 +240,7 @@ Validation returns `Result::fail()` with structured errors on violation. No data
 All sort work happens in memory, inside `ElementPlacementService::reorder()`:
 
 1. Load siblings of the target parent via the repository (sorted by `Sort ASC, ID ASC`)
-2. For `Section` moves, filter the siblings to the element's `Zone` (`filterByZone()`) — sort values are per-zone-per-parent, so mixing zones would corrupt the index
+2. At page level, the siblings are the element's `Zone` only, across every root class (`siblingSequence()` → `findByParents()` with the zone) — sort values are per-zone-per-parent, so mixing zones would corrupt the index
 3. Exclude the moved element from the sibling list
 4. Resolve the insertion index from the `after` ref's `id` (null → insert first; id-not-found → `Result::fail`)
 5. `array_splice()` the element into position

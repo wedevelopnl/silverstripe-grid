@@ -22,7 +22,7 @@ Reading the screenshot from the outside in:
 
 | Region | What it is |
 |--------|-----------|
-| **Section** (`What we do`) | Top-level band on the page. Sections are the only thing that can sit at page level. |
+| **Section** (`What we do`) | Top-level band on the page. Sections — and placements of section-rooted [shared blocks](shared-blocks.md) — are the only things that can sit at page level. |
 | **Row** (`Introduction`, `Service cards`) | A horizontal group inside a section. The header shows the row title and its column count. |
 | **Column** (`Centred intro`, `Design`, …) | A slot in the grid, with its own width and offset pickers. |
 | **Content block** (the white cards) | The actual content. Each card shows its type icon, title, and a short text summary. |
@@ -90,7 +90,7 @@ How a viewport *without* an override resolves is a project-level decision, not a
 
 Each section, row, column, and content block has a drag handle (the dotted grip at the left of its header). Drop targets are constrained to the hierarchy, so a column can only land in a row and a block can only land in a column — including into a *different* row or column, on the same page.
 
-Drops persist immediately, with the same optimistic-then-reconcile behaviour described above. Sort order is tracked per parent and, for sections, per zone: reordering one zone never renumbers another.
+Drops persist immediately, with the same optimistic-then-reconcile behaviour described above. Sort order is tracked per parent and, at page level, per zone: reordering one zone never renumbers another.
 
 Dragging needs a pointer — mouse, trackpad or touch. It is the one part of the editor with no keyboard equivalent; see [Keyboard and screen readers](#keyboard-and-screen-readers).
 

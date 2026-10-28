@@ -1,6 +1,6 @@
 ---
 name: grid-adapter-scaffold
-description: Scaffolds a new GridAdapter preset subclass for a CSS framework, with all required static config properties and YAML registration. Use when creating a new CSS framework adapter for the grid system.
+description: Scaffolds a new GridAdapter preset subclass for a CSS framework, with all required static config properties and its `SS_GRID_ADAPTER` selection. Use when creating a new CSS framework adapter for the grid system.
 ---
 
 This skill generates a complete grid adapter preset for a new CSS framework. Presets are zero-method subclasses of `GridAdapter` that declare their CSS vocabulary as `private static` Configurable properties.
@@ -45,19 +45,22 @@ Row class format: `%d` = column count (unused arg ignored for static strings lik
 
 ### Base Viewport Pattern
 
-If `base_viewport_key` is set (e.g., `'xs'`), that viewport uses the base format strings (no viewport infix). All other viewports use the responsive format strings.
+`base_viewport_key` names the smallest viewport (`min_width` 0, e.g. `'xs'`); that viewport uses the base format strings (no viewport infix). All other viewports use the responsive format strings. The base format strings also back `getBaseWidthClass()` / `getBaseOffsetClass()`.
 
-If `base_viewport_key` is `null`, all viewports use the responsive format. The base format strings are still used for `getBaseWidthClass()` / `getBaseOffsetClass()` (CMS editor preview).
+It must never be `null`, and must not be filtered out via `enabled_viewports`: rows declare their grid unprefixed, so a prefixed class at the smallest viewport leaves 0px upwards unstyled and collapses every column to one grid track (see the `base_viewport_key` docblock in `GridAdapter.php` and the Grid Adapter rules in CLAUDE.md).
 
-## Step 3: Register in YAML
+## Step 3: Select the Adapter
 
-Show the user the config to switch to the new adapter:
+The active adapter is chosen by the required `SS_GRID_ADAPTER` environment variable, resolved by `src/Factory/GridAdapterResolver.php` (bound in `_config/grid.yml`) — there is no Injector `class:` binding to override. Show the user:
 
-```yaml
-SilverStripe\Core\Injector\Injector:
-  WeDevelop\Grid\Contract\GridAdapterInterface:
-    class: WeDevelop\Grid\Adapter\{Name}Adapter
+```bash
+# .env — a custom adapter is selected by its FQCN
+SS_GRID_ADAPTER="WeDevelop\Grid\Adapter\{Name}Adapter"
 ```
+
+- The class must implement BOTH `GridAdapterInterface` and `ContentLayoutAdapterInterface` (the same singleton is aliased to both); subclassing `GridAdapter` satisfies both. The resolver throws at boot otherwise.
+- A preset bundled in this module is selectable by short name only once it is added to `GridAdapterResolver::PRESETS` (today `bootstrap` and `tailwind`).
+- Locally, `.docker/env.sh` seeds `SS_GRID_ADAPTER` into `.docker/.env`; edit it there to switch.
 
 ## Step 4: Verify
 

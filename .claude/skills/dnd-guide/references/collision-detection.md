@@ -84,9 +84,10 @@ The closure runs on every pointer move and decides which tier to use.
 
 **Why containment-first**: `closestCenter` biases toward smaller containers — a short section's center is closer than a tall section's center, even when the pointer is visually inside the tall section. This was a real bug during cross-section row drops.
 
-**Algorithm**:
-1. Find the parent container whose rect contains the pointer position
-2. If no containment match (pointer in gap between containers), fall back to `closestCenter`
+**Algorithm** (same three steps as the main skill):
+1. **Containment** — the parent container whose `droppableRects` rect contains `pointerCoordinates` wins (skipped when `pointerCoordinates` is null)
+2. **Lost-lock recovery** — if `hadSiblingHit`, no pending move is active and the source still has siblings (`sourceItems.size > 0`), re-resolve the source sibling via `closestCenterLive`. Auto-scroll drifts `droppableRects` past `MARGIN_Y` and drops `centerCrossing`'s lock while the preview still shows the item in that sibling's slot
+3. **Distance fallback** — `closestCenter` over the parent containers (pointer in the gap between containers, entering an empty container)
 
 ## Type Filtering
 
@@ -97,7 +98,7 @@ Two filter functions enforce hierarchy-level constraints:
 | `filterSiblings()` | Same-type only | Sibling reordering |
 | `filterParentContainers()` | Parent-type only | Cross-container targets |
 
-**Root-level special case**: Sections have `parentType === 'root'`. The root SortableContext's droppable ID (`'root'`) doesn't parse as a valid `DraggableType`. `filterParentContainers` matches containers with unparseable IDs when parent type is `'root'`.
+**Root-level special case**: Sections have parent type `'page'` (`PARENT_CONTAINER_TYPE` in `types/dnd.ts`), which is not a `DraggableType`. `filterParentContainers` therefore matches droppables whose IDs don't parse as a `DraggableType` when the parent type is `'page'`.
 
 **ID parsing is cached**: `parseDraggableId` in `types/dnd.ts` memoizes per unique ID (composite IDs are immutable per element), so `getDraggableType` — which both filters call on every pointer move — is a cache hit after the first parse. The cache is bounded by the number of distinct IDs seen in the session.
 
@@ -105,7 +106,7 @@ Two filter functions enforce hierarchy-level constraints:
 
 `captureWinnerNode` stores the winning collision's DOM **node reference** (not a rect snapshot). The consumer calls `getBoundingClientRect()` at comparison time for a fresh rect. The container is read from `collisions[0].data.droppableContainer` — every collision produced by our detectors AND by dnd-kit's `closestCenter` carries it, so there is no id→container lookup (don't add one).
 
-**Capture rules**: every return path captures — tier 1 hits, the tier 1 stale-rect recovery, tier 2 (pending path), and both tier 3 arms (containment and distance fallback). What varies is **consumption**, not capture:
+**Capture rules**: every return path captures — tier 1 hits, the tier 1 stale-rect recovery, tier 2 (pending path), and all three tier 3 arms (containment, lost-lock recovery, distance fallback). What varies is **consumption**, not capture:
 
 | Consumer | Uses the live node for | Falls back to |
 |----------|------------------------|---------------|
@@ -141,7 +142,8 @@ Drag starts → hadSiblingHit = false
   │       │   → closestCenterLive fallback (maintain over state)
   │       │
   │       └─ Pointer NOT inside source sibling?
-  │           → Fall through to tier 3 (parent containers)
+  │           → Fall through to tier 3 (containment, then lost-lock recovery
+  │             via closestCenterLive, then closestCenter)
   │
   └─ centerCrossing never finds sibling (hadSiblingHit = false)
       │
