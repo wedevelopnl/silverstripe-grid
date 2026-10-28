@@ -396,6 +396,9 @@ class SharedBlock extends DataObject
      * locale. Each locale's subtree is deleted on the stage being deleted, as
      * the cascade does it for the active one.
      *
+     * A delete from live alone is an unpublish, and leaves the placements: the
+     * pages show the block again once it is republished.
+     *
      * The unshare path detaches its placements before deleting, so by the time
      * this runs there are only the placements it chose not to keep.
      */
@@ -410,25 +413,36 @@ class SharedBlock extends DataObject
             return;
         }
 
-        LocaleScope::singleton()->each(static function () use ($blockId): void {
-            foreach (SharedBlockReference::get()->filter(['BlockID' => $blockId]) as $reference) {
-                $reference->doArchive();
+        // Unpublishing deletes this record from live alone, and so does the
+        // first half of an archive; the placements stay until it leaves draft.
+        $leavesDraft = Versioned::get_stage() !== Versioned::LIVE;
+
+        LocaleScope::singleton()->each(static function () use ($blockId, $leavesDraft): void {
+            if ($leavesDraft) {
+                self::archivePlacements($blockId);
             }
-
-            // A placement survives on live alone when its draft row was deleted
-            // without unpublishing first, and doArchive() above never sees those.
-            Versioned::withVersionedMode(static function () use ($blockId): void {
-                Versioned::set_stage(Versioned::LIVE);
-
-                foreach (SharedBlockReference::get()->filter(['BlockID' => $blockId]) as $reference) {
-                    $reference->deleteFromStage(Versioned::LIVE);
-                }
-            });
 
             $roots = GridElement::get()->filter(['ParentID' => $blockId, 'ParentClass' => self::class]);
 
             foreach ($roots as $root) {
                 $root->delete();
+            }
+        });
+    }
+
+    private static function archivePlacements(int $blockId): void
+    {
+        foreach (SharedBlockReference::get()->filter(['BlockID' => $blockId]) as $reference) {
+            $reference->doArchive();
+        }
+
+        // A placement survives on live alone when its draft row was deleted
+        // without unpublishing first, and doArchive() above never sees those.
+        Versioned::withVersionedMode(static function () use ($blockId): void {
+            Versioned::set_stage(Versioned::LIVE);
+
+            foreach (SharedBlockReference::get()->filter(['BlockID' => $blockId]) as $reference) {
+                $reference->deleteFromStage(Versioned::LIVE);
             }
         });
     }
