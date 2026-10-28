@@ -1,6 +1,6 @@
 <div class="ssgrid-column-width-picker" id="$ID" $AttributesHTML>
   <% loop $PickerOptions %>
-    <label class="ssgrid-column-width-picker-option">
+    <label class="ssgrid-column-width-picker-option ssgrid-focus-ring-within">
       <input
         type="radio"
         id="{$Up.ID}_{$Value}"
