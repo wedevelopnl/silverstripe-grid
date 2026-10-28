@@ -8,7 +8,6 @@ use Override;
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Core\ClassInfo;
 use SilverStripe\Dev\BuildTask;
-use SilverStripe\ORM\Connect\DBSchemaManager;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\DB;
 use SilverStripe\PolyExecution\PolyOutput;
@@ -18,6 +17,7 @@ use Symfony\Component\Console\Input\InputOption;
 use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Model\Section;
 use WeDevelop\Grid\Model\SharedBlockReference;
+use WeDevelop\Grid\Task\OneTime\ReadsDatabaseSchema;
 
 /**
  * One-time upgrade: copies Zone from the root-element subclass tables to the
@@ -43,6 +43,8 @@ use WeDevelop\Grid\Model\SharedBlockReference;
  */
 class BackfillGridZoneTask extends BuildTask
 {
+    use ReadsDatabaseSchema;
+
     /** @var list<string> */
     private const array STAGE_SUFFIXES = ['', '_Live', '_Versions'];
 
@@ -103,15 +105,6 @@ class BackfillGridZoneTask extends BuildTask
             : sprintf('<info>Done: %d row(s) updated.</info>', $total));
 
         return Command::SUCCESS;
-    }
-
-    /** The connection's schema manager, which is only ever null before boot. */
-    private function dbSchema(): DBSchemaManager
-    {
-        $dbSchema = DB::get_schema();
-        assert($dbSchema instanceof DBSchemaManager);
-
-        return $dbSchema;
     }
 
     /**
