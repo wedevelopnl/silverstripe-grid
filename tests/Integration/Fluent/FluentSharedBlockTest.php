@@ -712,6 +712,19 @@ final class FluentSharedBlockTest extends FluentGridTestCase
         self::assertSame(0, $this->inLocale('nl_NL', fn (): int => $this->placementCount($block)));
     }
 
+    public function testADeleteWithoutAMemberIsNotLocaleRestricted(): void
+    {
+        // A task or project code outside a request: no editor, so no locale
+        // restriction to honour, as for a bare delete() of the record.
+        ['block' => $block] = $this->blockPublishedInBothLocales();
+        $this->logOut();
+
+        $result = Injector::inst()->get(SharedBlockService::class)->delete($block, SharedBlockDeleteMode::Remove);
+
+        self::assertTrue($result->isOk());
+        self::assertSame(0, $this->inLocale('nl_NL', fn (): int => $this->placementCount($block)));
+    }
+
     public function testASiteWithoutLocalesYetStillDeletesThePlacements(): void
     {
         // Isolated, but no Locale created: Fluent filters nothing, so the one
