@@ -8,8 +8,10 @@ set -euo pipefail
 input="$(cat)"
 command="$(echo "$input" | jq -r '.tool_input.command // empty')"
 
-# Only intercept git push commands
-if [[ ! "$command" =~ ^git\ push ]]; then
+# Only intercept git push commands, also where one follows `&&`, `||`, `;`,
+# `|`, `(` or a newline; `git push-x` and `git pushx` are other commands
+push_pattern=$'(^|[;&|(\n])[[:space:]]*git[[:space:]]+push([[:space:];&|)]|$)'
+if [[ ! "$command" =~ $push_pattern ]]; then
   exit 0
 fi
 
