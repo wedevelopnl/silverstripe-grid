@@ -5,12 +5,15 @@ declare(strict_types=1);
 namespace WeDevelop\Grid\Tests\Integration\Service;
 
 use Page;
+use SilverStripe\Assets\Dev\TestAssetStore;
+use SilverStripe\Assets\Image;
 use PHPUnit\Framework\Attributes\CoversClass;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Dev\SapphireTest;
 use SilverStripe\Versioned\Versioned;
 use WeDevelop\Grid\Model\Column;
 use WeDevelop\Grid\Model\ContentElement;
+use WeDevelop\Grid\Model\MediaElement;
 use WeDevelop\Grid\Model\Row;
 use WeDevelop\Grid\Model\Section;
 use WeDevelop\Grid\Model\SharedBlock;
@@ -556,6 +559,51 @@ final class SharedBlockServiceTest extends SapphireTest
         $copiedLeaf = $copy->Rows()->first()?->Columns()->first()?->getChildren()->first();
         self::assertInstanceOf(ContentElement::class, $copiedLeaf);
         self::assertSame('Shared leaf', $copiedLeaf->Title, 'the whole subtree comes across, not just the root');
+    }
+
+    public function testDeleteInUnshareModeKeepsTheCopysImage(): void
+    {
+        // The copy duplicates the image record, which still names the original's
+        // file; deleting the original subtree must not take that file with it.
+        TestAssetStore::activate('SharedBlockServiceTest');
+
+        try {
+            $page = $this->objFromFixture(Page::class, 'test_page');
+            $block = GridTreeFactory::sharedBlock('Media block');
+            $column = GridTreeFactory::column(GridTreeFactory::row(GridTreeFactory::section($block, zone: '')));
+
+            $image = Image::create();
+            $image->setFromLocalFile(__DIR__ . '/../../E2E/Fixture/assets/test-image.png', 'shared-block-image.png');
+            $image->write();
+
+            $media = MediaElement::create();
+            $media->ParentID = $column->ID;
+            $media->ParentClass = Column::class;
+            $media->MediaType = 'image';
+            $media->MediaImageID = $image->ID;
+            $media->write();
+
+            $reference = GridTreeFactory::reference($page, $block, zone: 'main');
+            self::assertTrue($this->service->setPublished($block, true)->isOk());
+            $reference->publishSingle();
+
+            self::assertTrue($this->service->delete($block, SharedBlockDeleteMode::Unshare)->isOk());
+
+            foreach ([Versioned::DRAFT, Versioned::LIVE] as $stage) {
+                // The original went with the block, so the copy is the only one.
+                $copied = Versioned::withVersionedMode(static function () use ($stage): ?MediaElement {
+                    Versioned::set_stage($stage);
+
+                    return MediaElement::get()->first();
+                });
+
+                self::assertInstanceOf(MediaElement::class, $copied, "{$stage}: the page holds the copied media element");
+                self::assertTrue($copied->MediaImage()->exists(), "{$stage}: and its image file is still there");
+                self::assertNotSame((int) $image->ID, (int) $copied->MediaImageID, "{$stage}: through its own image record");
+            }
+        } finally {
+            TestAssetStore::reset();
+        }
     }
 
     public function testDeleteInUnshareModePublishesTheCopyWhereThePlacementWasLive(): void
