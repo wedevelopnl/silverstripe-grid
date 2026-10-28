@@ -172,6 +172,19 @@ test.describe('Duplicate content element to another column', () => {
       })
     })
 
+    await test.step('Back from the container step returns to page selection', async () => {
+      const dialog = page.getByTestId('duplicate-to-dialog')
+
+      await dialog.getByTestId('duplicate-to-back').click()
+      await expect(dialog.getByRole('heading', { name: 'Select target page' })).toBeVisible()
+      await expect(dialog.getByTestId('duplicate-to-step-page')).toBeVisible()
+
+      await dialog.getByTestId('duplicate-to-next').click()
+      await expect(dialog.getByTestId('duplicate-to-step-container')).toBeVisible({
+        timeout: 5_000,
+      })
+    })
+
     await test.step('Select Col B as target container and confirm', async () => {
       const dialog = page.getByTestId('duplicate-to-dialog')
 

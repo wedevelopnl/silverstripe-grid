@@ -136,6 +136,13 @@ export default function DuplicateToDialog({
     setSelectedPageId(pageId)
   }, [])
 
+  // A page with exactly one zone leaves nothing to choose, so the zone step is
+  // skipped: forward by the auto-advance below, and backward by goBack, which
+  // must not land on a step that would bounce straight forward again.
+  const onlyZone = zones.data?.length === 1 ? (zones.data[0] ?? null) : null
+  // Sections need no container selection — they go straight to confirmation.
+  const stepAfterZone: Step = elementType === 'section' ? 'confirm' : 'container'
+
   const advanceFromPage = useCallback(() => {
     setStep('zone')
   }, [])
@@ -143,16 +150,11 @@ export default function DuplicateToDialog({
   // Auto-select zone and advance when there is exactly one zone
   useEffect(() => {
     // Stryker disable next-line ConditionalExpression: Equivalent — the single-zone auto-advance routes to exactly the step it lands on; on non-zone steps useZones is disabled so zones.data is undefined and the body is gated out anyway
-    if (step === 'zone' && zones.data !== undefined && zones.data.length === 1) {
-      setSelectedZone(zones.data[0])
-      if (elementType === 'section') {
-        // Sections need no container selection — show confirmation step
-        setStep('confirm')
-      } else {
-        setStep('container')
-      }
+    if (step === 'zone' && onlyZone !== null) {
+      setSelectedZone(onlyZone)
+      setStep(stepAfterZone)
     }
-  }, [step, zones.data, elementType])
+  }, [step, onlyZone, stepAfterZone])
 
   const handleZoneSelect = useCallback((zone: string) => {
     setSelectedZone(zone)
@@ -162,12 +164,8 @@ export default function DuplicateToDialog({
     // Stryker disable next-line ConditionalExpression: Equivalent — advanceFromZone is wired only to the zone-step Next button, which is disabled while selectedZone === null, so the guard is unreachable
     if (selectedZone === null) return
 
-    if (elementType === 'section') {
-      setStep('confirm')
-    } else {
-      setStep('container')
-    }
-  }, [elementType, selectedZone])
+    setStep(stepAfterZone)
+  }, [stepAfterZone, selectedZone])
 
   const handleContainerSelect = useCallback((containerId: number) => {
     setSelectedContainerId(containerId)
@@ -186,9 +184,12 @@ export default function DuplicateToDialog({
   }, [onConfirm, selectedPageId, selectedZone, selectedContainerId, step, elementType])
 
   const goBack = useCallback(() => {
-    if (step === 'zone') {
+    if (step === 'zone' || onlyZone !== null) {
+      // From the zone step, or from any later one when the zone step was
+      // skipped: the zone was picked for the author, so it is forgotten too.
       setStep('page')
       setSelectedZone(null)
+      setSelectedContainerId(null)
     } else if (step === 'container') {
       setStep('zone')
       setSelectedContainerId(null)
@@ -197,13 +198,10 @@ export default function DuplicateToDialog({
       // arm is reached only when step ∉ {zone, container}, and the Back button is
       // hidden on the page step, so `step === 'confirm'` is always true here.
     } else if (step === 'confirm') {
+      setStep('zone')
       setSelectedZone(null)
-      // When there's only one zone, the zone step auto-advances — going back
-      // to 'zone' would immediately bounce forward again, silently breaking
-      // the back button. Skip straight to 'page' instead.
-      setStep(zones.data !== undefined && zones.data.length === 1 ? 'page' : 'zone')
     }
-  }, [step, zones.data])
+  }, [step, onlyZone])
 
   // Stryker disable next-line EqualityOperator: Equivalent — `> 1` only differs at exactly 1 zone, which auto-advances off the zone step before this list ever renders
   const hasMultipleZones = zones.data !== undefined && zones.data.length > 1
