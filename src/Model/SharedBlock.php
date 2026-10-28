@@ -311,7 +311,8 @@ class SharedBlock extends DataObject
     }
 
     /**
-     * Whether any page still places this block, on either stage. A live-only
+     * Whether any page still places this block, on either stage and in any
+     * locale: the record is shared, its placements are not. A live-only
      * placement counts: unpublishing a consuming page does not stop it from
      * consuming the block.
      */
@@ -321,15 +322,15 @@ class SharedBlock extends DataObject
             return false;
         }
 
-        if (SharedBlockReference::get()->filter(['BlockID' => $this->ID])->exists()) {
-            return true;
-        }
+        $blockId = (int) $this->ID;
+        $placedInLocale = static fn (): bool => SharedBlockReference::get()->filter(['BlockID' => $blockId])->exists()
+            || Versioned::withVersionedMode(static function () use ($blockId): bool {
+                Versioned::set_stage(Versioned::LIVE);
 
-        return Versioned::withVersionedMode(function (): bool {
-            Versioned::set_stage(Versioned::LIVE);
+                return SharedBlockReference::get()->filter(['BlockID' => $blockId])->exists();
+            });
 
-            return SharedBlockReference::get()->filter(['BlockID' => $this->ID])->exists();
-        });
+        return in_array(true, LocaleScope::singleton()->each($placedInLocale), true);
     }
 
     /**

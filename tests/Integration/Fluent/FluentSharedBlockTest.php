@@ -826,4 +826,16 @@ final class FluentSharedBlockTest extends FluentGridTestCase
         self::assertSame(2, $resolver->usageCount($block), 'Contact once, Over ons once');
         self::assertCount(2, $resolver->pagesUsing($block));
     }
+
+    public function testABlockPlacedOnlyInAnotherLocaleIsReferenced(): void
+    {
+        $block = $this->populatedBlock();
+        self::assertFalse($block->isReferenced(), 'precondition: placed nowhere');
+
+        $this->inLocale('nl_NL', function () use ($block): void {
+            GridTreeFactory::reference($this->createPage('Over ons'), $block, zone: 'main');
+        });
+
+        self::assertTrue($block->isReferenced(), 'read from English, the Dutch placement counts');
+    }
 }
