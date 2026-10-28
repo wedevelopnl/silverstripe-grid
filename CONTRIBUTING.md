@@ -90,7 +90,7 @@ See the [E2E fixture protocol](docs/testing/e2e-fixtures.md) for the YAML fixtur
 | `npm run typecheck` | TypeScript type checking |
 | `npm run i18n:check` | Dry-run string collection + locale parity check |
 
-CI runs the same suite, plus `npm run i18n:check` and a check that the committed build output is up to date.
+CI runs the same checks as separate jobs, plus a check that the committed build output (`client/dist`, `client/lang`) is up to date.
 
 `task class-leak` only reads PHP, so a class that SilverStripe reaches solely through YAML config or class-manifest discovery looks unused to it. Extensions, Injector factories, build tasks, reports and admin controllers are skipped by parent type. A class that is wired up only as a YAML Injector binding and has none of those parents must be added by FQCN to the `--skip-type` list in the `CLASS_LEAK` variable in `Taskfile.yml`. Only `src/` is scanned, so a class that only tests reference is still reported.
 

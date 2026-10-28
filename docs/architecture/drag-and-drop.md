@@ -60,7 +60,7 @@ The API returns a flat list of root-level nodes plus an explicit root parent ide
 ```ts
 interface TreeApiResponse {
   rootParent: NodeRef;           // { type: 'page', id } in the page editor; { type: 'sharedBlock', id } in the library editor
-  nodes: ElementNode[];          // root sections for the zone
+  nodes: ElementNode[];          // the zone's root elements (Sections and placements); in the library editor, the block's root
 }
 ```
 
@@ -78,7 +78,7 @@ Every node carries:
 - `self: NodeRef` — the canonical identity of this node
 - `parent: NodeRef` — the identity of its parent
 - `nodeKey: NodeKey` / `parentKey: NodeKey` — precomputed string forms for Map/Set keys and dnd-kit IDs
-- `id: number` — bare numeric ID. Every mutation endpoint takes a `NodeRef` (`self`), not this; never use it as a map key.
+- `id: number` — bare numeric ID. Mutation endpoints identify the element itself by a `NodeRef` (`self`); only sibling anchors (`insertAfterElementID`) and block ids travel bare. Never use it as a map key.
 
 Container nodes additionally carry `containerType`, `allowedTypes`, and `children`. Column nodes carry `gridSettings`.
 
@@ -225,11 +225,12 @@ Controller (HTTP concerns)
 
 ### Phase 1: Validation
 
-`ReorderValidator::validate()` short-circuits to `Result::ok()` when the element's current parent (`ParentID` + `ParentClass`) already equals the target parent — a same-parent reorder cannot change the hierarchy, so no rule check runs.
+`ReorderValidator::validate()` short-circuits to `Result::ok()` when the element's current parent (`ParentID` + `ParentClass`) already equals the target parent — a same-parent reorder cannot change the hierarchy, so no rule check runs (a placement whose block was later emptied keeps its place).
 
-Before that, a shared-block placement whose block has no root fails `BLOCK_EMPTY`. Cross-parent moves then check:
+Cross-parent moves then check:
 1. **Shared boundary** — source and target must sit in the same shared context (both on the page, or both inside the same block), else `SHARED_BOUNDARY`
-2. **`PlacementRulesTrait::checkPlacementRules()`** — the write-time rules, judged by the element's effective class (`getPlacementClass()`: a placement counts as its block's root class): no placement inside a shared context (`SHARED_NESTING`); at page level `canBeRoot()` (Sections and section-rooted placements); in a container `isChildAllowed()` (Section→Row, Row→Column, Column→any non-container element)
+2. **Empty block** — a shared-block placement whose block has no root fails `BLOCK_EMPTY`
+3. **`PlacementRulesTrait::checkPlacementRules()`** — the write-time rules, judged by the element's effective class (`getPlacementClass()`: a placement counts as its block's root class): no placement inside a shared context (`SHARED_NESTING`); at page level `canBeRoot()` (Sections and section-rooted placements); in a container `isChildAllowed()` (Section→Row, Row→Column, Column→any non-container element)
 
 See [Shared blocks — Validation](shared-blocks.md#validation).
 

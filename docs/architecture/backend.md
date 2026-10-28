@@ -94,7 +94,7 @@ Two value objects model this data: `ViewportConfig` (readonly record of width/of
 
 `GridSettingsResolver` resolves the effective `ViewportConfig` for each active viewport by applying overrides on top of the default. The resolver supports two strategies via `OverrideStrategy`:
 - **Isolated** (default): each viewport uses the default unless it has an explicit override.
-- **Cascade**: overrides carry forward to subsequent viewports (mobile-first), selected through the resolver's `overrideStrategy` constructor argument — see [Override Strategy](#override-strategy-module-config).
+- **Cascade**: an override also applies to every smaller viewport down to the next override (the resolver walks largest→smallest), selected through the resolver's `overrideStrategy` constructor argument — see [Override Strategy](#override-strategy-module-config).
 
 The Column model exposes `getGridSettings(): GridSettings` and `setGridSettings(GridSettings)` for typed access, routing through `DBGridSettings` via `dbObject()`.
 
@@ -208,7 +208,7 @@ any other element.
 | GET | `api/readTree/{PageID}/{Zone}/version/{Version}` | Load element tree at a specific historical version | 200 + `{ rootParent: NodeRef, nodes: GridNode[] }` |
 | POST | `api/create` | Create an element under a parent — a container (Section / Row / Column, via `containerType`) or a content element inside a `Column` (via `className`); the controller dispatches on whichever discriminator is present | 204 |
 | PATCH | `api/setPublished` | Publish (`published: true`, recursive) or unpublish (`published: false`) an element | 204 |
-| DELETE | `api/delete` | Archive an element (id on query string) | 204 |
+| DELETE | `api/delete` | Archive an element (`type` and `id` on the query string) | 204 |
 | POST | `api/duplicate` | Duplicate an element in place (same parent) | 204 |
 | POST | `api/duplicateTo` | Duplicate an element into a specific target parent (and target page / zone) | 204 |
 | PATCH | `api/reorder` | Reorder or move an element within or across parents | 204 |
@@ -248,7 +248,7 @@ The controller delegates body parsing to `RequestBodyParser`, which returns type
 - `parseUpdateGridSettingsBody()` — validates `element` (`NodeRef`) plus viewport-scoped width/offset/visibility (viewport must match an adapter viewport)
 - `parseDuplicateToBody()` — validates source `element` (`NodeRef`), `targetPageId`, `targetZone`, and `targetParent` (`NodeRef`)
 - `parseResetGridSettingsOverridesBody()` — validates `pageId`, `zone`, and optional `viewport` filter (rejects the adapter default viewport — it has no overrides to reset)
-- `parseElementRef()` — validates a `NodeRef` `{type, id}` envelope under the `element` key (rejecting `NodeType::Page`); used by the single-target mutation endpoints (publish/unpublish, archive, duplicate)
+- `parseElementRef()` — validates a `NodeRef` `{type, id}` envelope under the `element` key (rejecting `NodeType::Page`); used by the single-target mutation endpoints (publish/unpublish, duplicate, and `api/detach` on `SharedBlockController`). Archive reads the same pair from the query string through `parseElementRefFromQuery()`
 
 Invalid payloads produce HTTP 400. Validation failures from the service layer produce HTTP 422 with structured error JSON.
 
@@ -396,7 +396,7 @@ The boundary where SilverStripe's `ValidationException` becomes a domain `Result
 Resolves the effective `ViewportConfig` for each active viewport from a `GridSettings` value object. The resolver applies its configured `OverrideStrategy` (a module setting, not the adapter's):
 
 - **Isolated** (default): each viewport gets the default config unless it has an explicit override entry.
-- **Cascade**: overrides carry forward to subsequent viewports in order, implementing mobile-first inheritance.
+- **Cascade**: an override at a viewport also applies to every smaller viewport, down to the next smaller override; viewports above the largest override use the default.
 
 `Column::getColumnClasses()` obtains the `array<string, ViewportConfig>` map from the resolver and hands it to `ColumnClassResolver`, which generates CSS classes by comparing each viewport's effective config to the previous one — the offset to the last *visible* viewport's, since a hidden viewport emits no offset class.
 
@@ -421,9 +421,9 @@ Violations throw `ValidationException`, preventing the database write. See [Shar
 
 Called by `ElementPlacementService` before executing a placement — on both the `reorder()` (move existing element) and `insertAfter()` (place just-written element) paths, so newly-created and duplicated elements run the same checks. Returns `Result::fail()` instead of throwing, maintaining the Result pattern contract:
 
-1. A placement of a block with no root fails `BLOCK_EMPTY`
-2. Same-parent moves short-circuit to ok — reordering within a container cannot violate hierarchy rules
-3. Source and target shared contexts must match, else `SHARED_BOUNDARY` (a fresh, unparented element has no source context and skips this)
+1. Same-parent moves short-circuit to ok — reordering within a container cannot violate hierarchy rules, and an already-placed reference whose block was later emptied keeps its place
+2. Source and target shared contexts must match, else `SHARED_BOUNDARY` (a fresh, unparented element has no source context and skips this)
+3. A placement of a block with no root fails `BLOCK_EMPTY`
 4. Then the same `checkPlacementRules()` as the write-time extension
 
 ### Shared authority: `ContainerType`
@@ -648,7 +648,7 @@ Server and client use the same shape: the frontend `NodeKey` (`"${NodeType}-${id
 | `VerticalAlignment` | Enum: Top, Center, Bottom |
 | `ViewportConfig` | Readonly record: width, offset, visible for a single viewport |
 | `GridSettings` | Default `ViewportConfig` + map of per-viewport overrides |
-| `OverrideStrategy` | Enum: Isolated (per-viewport), Cascade (mobile-first carry-forward) |
+| `OverrideStrategy` | Enum: Isolated (per-viewport), Cascade (an override carries down to smaller viewports) |
 | `OffsetStrategy` | Enum: Margin, GridPlacement — how offsets translate to CSS |
 | `WriteResult` | Converts thrown `ValidationException` into `Result::fail()` |
 
