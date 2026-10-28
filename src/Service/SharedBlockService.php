@@ -473,7 +473,7 @@ class SharedBlockService
                 Versioned::set_stage(Versioned::LIVE);
                 $live = SharedBlockReference::get()->filter(['BlockID' => $blockId]);
 
-                return ($draftIds === [] ? $live : $live->exclude('ID', $draftIds))->toArray();
+                return ($draftIds === [] ? $live : $live->exclude(['ID' => $draftIds]))->toArray();
             });
 
             /** @var array<int, SiteTree> $pages */
