@@ -18,10 +18,10 @@ use WeDevelop\Grid\Model\GridElement;
  * whole — deleting it, counting where it is used — has to visit each locale in
  * turn; a plain query only ever sees the active one.
  *
- * Safe to call unconditionally: without Fluent, or without locale isolation on
- * GridElement, the operation runs once in the ambient state. The Fluent class
- * references are strings at compile time and are only dereferenced past that
- * guard, as in {@see SharedBlockLocaliser}.
+ * Safe to call unconditionally: without Fluent, without locale isolation on
+ * GridElement, or before any locale exists, the operation runs once in the
+ * ambient state. The Fluent class references are strings at compile time and
+ * are only dereferenced past that guard, as in {@see SharedBlockLocaliser}.
  */
 final class LocaleScope
 {
@@ -32,19 +32,23 @@ final class LocaleScope
      *
      * @template T
      * @param callable(?Locale): T $callback Receives the active locale, or null
-     *                                       on the single pass without Fluent.
+     *                                       on the single pass without locales.
      * @return array<string, T> Results keyed by locale code; '' for the pass
-     *                          without Fluent.
+     *                          without locales.
      */
     public function each(callable $callback): array
     {
-        if (!$this->isLocalised()) {
+        $locales = $this->isLocalised() ? $this->locales() : [];
+
+        // No locale created yet leaves Fluent nothing to filter by, so the
+        // ambient state already sees every row.
+        if ($locales === []) {
             return ['' => $callback(null)];
         }
 
         $results = [];
 
-        foreach ($this->locales() as $code => $locale) {
+        foreach ($locales as $code => $locale) {
             $results[$code] = FluentState::singleton()->withState(
                 static function (FluentState $state) use ($code, $locale, $callback): mixed {
                     $state->setLocale($code);

@@ -8,6 +8,7 @@ use Page;
 use PHPUnit\Framework\Attributes\CoversClass;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Versioned\Versioned;
+use TractorCow\Fluent\Model\Locale;
 use TractorCow\Fluent\Service\CopyToLocaleService;
 use TractorCow\Fluent\State\FluentState;
 use WeDevelop\Grid\Extensions\FluentSharedBlockExtension;
@@ -709,6 +710,27 @@ final class FluentSharedBlockTest extends FluentGridTestCase
 
         self::assertTrue($result->isOk());
         self::assertSame(0, $this->inLocale('nl_NL', fn (): int => $this->placementCount($block)));
+    }
+
+    public function testASiteWithoutLocalesYetStillDeletesThePlacements(): void
+    {
+        // Isolated, but no Locale created: Fluent filters nothing, so the one
+        // ambient pass sees every row, as it did before the delete went
+        // locale by locale.
+        foreach (Locale::get() as $locale) {
+            $locale->delete();
+        }
+        Locale::clearCached();
+
+        $page = $this->createPage('Contact');
+        $block = $this->populatedBlock('Opening hours');
+        GridTreeFactory::reference($page, $block, zone: 'main');
+
+        $result = Injector::inst()->get(SharedBlockService::class)->delete($block, SharedBlockDeleteMode::Remove);
+
+        self::assertSame(1, $result->unwrap(), 'the placement was counted and handled');
+        self::assertSame(0, $this->placementCount($block), 'no placement of the deleted block is left');
+        self::assertSame(0, $this->rootCount($block), 'nor its content');
     }
 
     public function testUsageCountsEveryLocaleAndAPageInSeveralLocalesOnce(): void
