@@ -212,6 +212,27 @@ en:
     NOT_PLACED: 'Only an element that sits on a page can be shared.'
     SHARED_NESTING: 'Content inside a shared block cannot be shared again.'
     ZONE_REQUIRED: 'A shared block placed directly on a page needs a page area.'
+  WeDevelop\Grid\Task\OneTime\Beta6\RepairSharedBlockPlacementsTask:
+    DELETED_PAGE: '(deleted page)'
+    HEADER: 'Leftover placements of deleted shared blocks:'
+    IRREVERSIBLE: 'This removes database rows and cannot be undone except from a backup.'
+    MANUAL: 'Left for manual review:'
+    NOTHING: 'Nothing to repair: no placement of a deleted shared block is left.'
+    NO_PAGE: '(no page) under {class} #{id}'
+    PAGE: '{title} (page {id})'
+    PAGES:
+      one: '{count} page'
+      other: '{count} pages'
+    PLACEMENTS:
+      one: '{count} placement'
+      other: '{count} placements'
+    PREVIEW: 'Preview only: nothing is changed.'
+    STAGE_BOTH: 'draft and published'
+    STAGE_DRAFT: draft
+    STAGE_LIVE: published
+    SUMMARY: '{placements} on {pages} removed. Their pages show visitors the same as before. Ask an editor to check them.'
+    SUMMARY_DRY_RUN: '{placements} on {pages} would be removed. Their pages show visitors the same as before. Ask an editor to check them.'
+    UNCLASSIFIABLE: '{class} #{id} ({stage}): its element row is missing, so its page cannot be told'
   WeDevelop\Grid\UserForms\UserFormElement:
     CLASS_DESCRIPTION: 'A form built in the CMS; its submissions are kept with the block.'
     PLURALNAME: Forms

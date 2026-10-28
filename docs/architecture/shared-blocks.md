@@ -156,6 +156,8 @@ The block record is one cross-locale row while its subtree and its placements ar
 
 `SharedBlock::onBeforeDelete()`, in every locale, archives every remaining reference on draft, deletes live-only stragglers from live, and deletes the locale's block roots on the stage being deleted (cascading down the subtree, as `RootElements` does for the active locale). Placements are page content, so no ownership config on the block reaches them; this hook is what keeps references from being stranded on every delete path (the CMS action, a dev task, a bare `delete()` in project code). Never bypass it by deleting rows directly.
 
+Releases 6.0.0-beta.4 and beta.5 ran this cleanup in the active locale only, so a site that deleted a block placed in several locales may hold placements pointing at a block record that is gone. `sake tasks:repair-shared-block-placements [--dry-run]` (`Task\OneTime\Beta6\RepairSharedBlockPlacementsTask`) removes them from draft, live and history in every locale and lists their pages; it leaves the block's orphaned subtree rows alone, since nothing records whether an earlier delete meant to keep that content.
+
 The library **listing** offers no removal: `getGridFieldConfig()` removes both `GridFieldArchiveAction` and `GridFieldDeleteAction`. Both must go — for a versioned model the archive action is what suppresses the stock delete (`augmentColumns()`), so removing it alone promotes the row action to a permanent delete. A row cannot ask for the mode, so removal lives only in the edit form.
 
 ## Validation

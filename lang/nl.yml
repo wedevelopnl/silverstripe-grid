@@ -212,6 +212,27 @@ nl:
     UNSHARE_EMPTY_BLOCK: 'Dit blok heeft geen inhoud meer om te behouden. Verwijder het blok en haal de plaatsingen weg.'
     SHARED_NESTING: 'Inhoud binnen een gedeeld blok kan niet nogmaals gedeeld worden.'
     ZONE_REQUIRED: 'Een gedeeld blok dat direct op een pagina staat, heeft een paginagebied nodig.'
+  WeDevelop\Grid\Task\OneTime\Beta6\RepairSharedBlockPlacementsTask:
+    DELETED_PAGE: '(verwijderde pagina)'
+    HEADER: 'Achtergebleven plaatsingen van verwijderde gedeelde blokken:'
+    IRREVERSIBLE: 'Dit verwijdert rijen uit de database en kan alleen met een back-up worden teruggedraaid.'
+    MANUAL: 'Handmatig te beoordelen:'
+    NOTHING: 'Niets te herstellen: er is geen plaatsing van een verwijderd gedeeld blok meer.'
+    NO_PAGE: '(geen pagina) onder {class} #{id}'
+    PAGE: '{title} (pagina {id})'
+    PAGES:
+      one: '{count} pagina'
+      other: '{count} pagina’s'
+    PLACEMENTS:
+      one: '{count} plaatsing'
+      other: '{count} plaatsingen'
+    PREVIEW: 'Alleen een voorbeeld: er wordt niets gewijzigd.'
+    STAGE_BOTH: 'concept en gepubliceerd'
+    STAGE_DRAFT: concept
+    STAGE_LIVE: gepubliceerd
+    SUMMARY: '{placements} op {pages} verwijderd. Bezoekers zien op die pagina’s hetzelfde als voorheen. Vraag een redacteur ze na te kijken.'
+    SUMMARY_DRY_RUN: '{placements} op {pages} zouden worden verwijderd. Bezoekers zien op die pagina’s hetzelfde als voorheen. Vraag een redacteur ze na te kijken.'
+    UNCLASSIFIABLE: '{class} #{id} ({stage}): de elementrij ontbreekt, dus de pagina is niet te bepalen'
   WeDevelop\Grid\UserForms\UserFormElement:
     CLASS_DESCRIPTION: 'Een formulier dat in het CMS wordt opgebouwd; de inzendingen worden bij het blok bewaard.'
     PLURALNAME: Formulieren
