@@ -398,7 +398,7 @@ Resolves the effective `ViewportConfig` for each active viewport from a `GridSet
 - **Isolated** (default): each viewport gets the default config unless it has an explicit override entry.
 - **Cascade**: overrides carry forward to subsequent viewports in order, implementing mobile-first inheritance.
 
-`ColumnClassResolver` calls the resolver to obtain a `array<string, ViewportConfig>` map, then generates CSS classes by comparing each viewport's effective config to the previous one.
+`Column::getColumnClasses()` obtains the `array<string, ViewportConfig>` map from the resolver and hands it to `ColumnClassResolver`, which generates CSS classes by comparing each viewport's effective config to the previous one — the offset to the last *visible* viewport's, since a hidden viewport emits no offset class.
 
 ## Validation Layer
 

@@ -219,7 +219,67 @@ final class ColumnClassResolverTest extends TestCase
                 'lg' => new ViewportConfig(8, 0, true),
             ],
             self::threeViewportStub(),
-            'col-xs-12 hidden-md visible-lg col-lg-8 offset-lg-0',
+            'col-xs-12 hidden-md visible-lg col-lg-8',
+        ];
+
+        // Regression: the offset is compared with the last VISIBLE viewport. A
+        // hidden viewport whose offset equals the next visible one must not
+        // swallow that offset — it was never emitted.
+        yield 'offset after a hidden viewport with the same offset is emitted' => [
+            [
+                'xs' => new ViewportConfig(6, 0, true),
+                'sm' => new ViewportConfig(6, 2, false),
+                'md' => new ViewportConfig(6, 2, true),
+                'lg' => new ViewportConfig(6, 2, true),
+            ],
+            self::fourViewportStub(),
+            'col-xs-6 hidden-sm visible-md col-md-6 offset-md-2',
+        ];
+
+        // Mirror: an earlier visible offset must not carry past a hidden
+        // viewport into a later viewport that has none.
+        yield 'offset before a hidden viewport is reset after it' => [
+            [
+                'xs' => new ViewportConfig(6, 2, true),
+                'sm' => new ViewportConfig(6, 0, false),
+                'md' => new ViewportConfig(6, 0, true),
+                'lg' => new ViewportConfig(6, 0, true),
+            ],
+            self::fourViewportStub(),
+            'col-xs-6 offset-xs-2 hidden-sm visible-md col-md-6 offset-md-0',
+        ];
+
+        // What the editor writes when a column is hidden at the smallest
+        // viewport: the hidden override copies the default's width and offset.
+        yield 'offset survives hiding the smallest viewport' => [
+            [
+                'xs' => new ViewportConfig(8, 2, false),
+                'md' => new ViewportConfig(8, 2, true),
+            ],
+            self::twoViewportStub(),
+            'hidden-xs visible-md col-md-8 offset-md-2',
+        ];
+
+        yield 'offset survives a run of consecutive hidden viewports' => [
+            [
+                'xs' => new ViewportConfig(6, 0, true),
+                'sm' => new ViewportConfig(6, 3, false),
+                'md' => new ViewportConfig(6, 3, false),
+                'lg' => new ViewportConfig(6, 3, true),
+            ],
+            self::fourViewportStub(),
+            'col-xs-6 hidden-sm visible-lg col-lg-6 offset-lg-3',
+        ];
+
+        yield 'non-cascade: offset after a hidden viewport with the same offset is emitted' => [
+            [
+                'xs' => new ViewportConfig(6, 0, true),
+                'sm' => new ViewportConfig(6, 2, false),
+                'md' => new ViewportConfig(6, 2, true),
+                'lg' => new ViewportConfig(6, 2, true),
+            ],
+            self::nonCascadeFourViewportStub(),
+            'col-xs-6 hidden-sm col-md-6 offset-md-2',
         ];
 
         yield 'base column class leads the viewport classes' => [

@@ -13,7 +13,10 @@ use WeDevelop\Grid\Value\ViewportConfig;
  *
  * Walks adapter viewports smallest→largest. Only emits CSS classes at breakpoints
  * where the effective value changes from the previous breakpoint. The first
- * viewport always emits a width class.
+ * viewport always emits a width class. The offset is compared with the last
+ * VISIBLE viewport: a hidden viewport emits no offset class, so comparing with
+ * its offset would drop an equal offset after it, or let an earlier offset
+ * carry on past it.
  *
  * The framework's base column class, when it has one, leads the list — width
  * helpers scoped to it (`.column.is-{n}`) match nothing without it.
@@ -78,10 +81,11 @@ final class ColumnClassResolver
                 if ($offset !== $prevOffset) {
                     $parts[] = $adapter->getOffsetClass($key, $offset);
                 }
+
+                $prevOffset = $offset;
             }
 
             $prevWidth = $width;
-            $prevOffset = $offset;
             $prevVisible = $visible;
         }
 
