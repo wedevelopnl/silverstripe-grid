@@ -8,7 +8,6 @@ use Override;
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Core\ClassInfo;
 use SilverStripe\Dev\BuildTask;
-use SilverStripe\ORM\Connect\DBSchemaManager;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\DB;
 use SilverStripe\PolyExecution\PolyOutput;
@@ -22,6 +21,7 @@ use WeDevelop\Grid\Extensions\GridPageExtension;
 use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Service\GridZoneResolver;
 use WeDevelop\Grid\Task\OneTime\Beta4\BackfillGridZoneTask;
+use WeDevelop\Grid\Task\OneTime\ReadsDatabaseSchema;
 
 /**
  * One-time upgrade: repairs grid elements whose Zone breaks the rule
@@ -52,6 +52,8 @@ use WeDevelop\Grid\Task\OneTime\Beta4\BackfillGridZoneTask;
  */
 class RepairGridZoneTask extends BuildTask
 {
+    use ReadsDatabaseSchema;
+
     /** @var array<string, string> Stage table suffix => label used in the report. */
     private const array STAGES = ['' => 'draft', '_Live' => 'live', '_Versions' => 'history'];
 
@@ -363,14 +365,5 @@ class RepairGridZoneTask extends BuildTask
             $repaired,
             count($this->manual),
         ));
-    }
-
-    /** The connection's schema manager, which is only ever null before boot. */
-    private function dbSchema(): DBSchemaManager
-    {
-        $dbSchema = DB::get_schema();
-        assert($dbSchema instanceof DBSchemaManager);
-
-        return $dbSchema;
     }
 }
