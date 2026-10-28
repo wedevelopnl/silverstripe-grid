@@ -86,7 +86,7 @@ When you see a symptom, start here.
 | **Cross-container drag doesn't show element in target** | Pending tree not applied | Is `handleDragOver` detecting the cross-container move? Is `applyPendingMove` called? | `useDragAndDrop.ts` (handleDragOver), `usePendingTree.ts` |
 | **Backend rejects a valid move** | Hierarchy validation too strict, or a shared-block boundary / empty block | Check `ContainerType::isChildAllowed()`, `ReorderValidator::validate()` (`SHARED_BOUNDARY`, `BLOCK_EMPTY`) and `PlacementRulesTrait::checkPlacementRules()` | `src/Value/ContainerType.php`, `src/Validation/ReorderValidator.php`, `src/Validation/PlacementRulesTrait.php` |
 | **Optimistic update doesn't rollback on error** | Snapshot not captured or not restored | Is `onMutate` returning snapshot? Is `onError` calling `setQueryData(snapshot)`? | `useElementMutations.ts` |
-| **E2E test flaky — works sometimes** | Missing settlement wait between operations | Is `waitForMutationSettlement()` called after each drop? Are there enough pointer steps (20+)? | `tests/E2E/helpers/drag.ts`, the failing spec |
+| **E2E test flaky — works sometimes** | Missing settlement wait between operations | Is `waitForMutationSettlement()` registered BEFORE each drop's release and awaited after it? Are there enough pointer steps (20+)? | `tests/E2E/helpers/drag.ts`, the failing spec |
 | **Cross-zone drag succeeds (shouldn't)** | Zones share a `DndContext` | Each zone should have its own `GridEditorField` and `DndContext` | `GridEditorField`, component tree |
 
 ## Architecture
@@ -208,7 +208,7 @@ The reorder pipeline (`GridController::apiReorder` → `ElementPlacementService:
 | `client/src/js/types/dnd.ts` | Composite IDs (`type-numericId`), `PARENT_CONTAINER_TYPE` hierarchy |
 | `client/src/js/components/GridEditor/EditableGridEditor.tsx` | `DndContext` owner (`effectiveData`/pending-tree wiring now lives in `client/src/js/components/GridEditor/useGridEditorDnd.ts`) |
 | `src/Controllers/GridController.php` | `apiReorder`: parses the body, permission checks, calls the placement service |
-| `src/Validation/ReorderValidator.php` | Same-parent short-circuit, shared-block boundary, then the shared `PlacementRulesTrait` rules (`ContainerType::isChildAllowed()`) |
+| `src/Validation/ReorderValidator.php` | Reorder-time validation — the order of its checks is in the ReorderValidator rules in CLAUDE.md (Hierarchy Validation) |
 | `src/Service/ElementPlacementService.php` | Sort calculation, dirty tracking, cross-parent reindex (zone-scoped at page root) |
 
 ## References
