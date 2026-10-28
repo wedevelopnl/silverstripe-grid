@@ -370,6 +370,21 @@ final class SharedBlockPlacementTest extends SapphireTest
         self::assertSame(ReorderValidator::class . '.BLOCK_EMPTY', $result->errors()[0]->key);
     }
 
+    public function testReorderingAPlacementWhoseBlockWasEmptiedWithinItsParentIsAllowed(): void
+    {
+        $page = $this->objFromFixture(Page::class, 'test_page');
+
+        $block = GridTreeFactory::sharedBlock();
+        $root = GridTreeFactory::section($block, zone: '');
+        $reference = GridTreeFactory::reference($page, $block);
+
+        $root->delete();
+
+        $result = $this->getValidator()->validate($reference, $page);
+
+        self::assertTrue($result->isOk(), 'an already-placed reference keeps its place when its block is emptied');
+    }
+
     public function testWriteTimeValidationRejectsNestedReference(): void
     {
         // The same rule at write time, through the other user of the trait.
