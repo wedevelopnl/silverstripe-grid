@@ -20,45 +20,20 @@ You are a SilverStripe framework architecture specialist with expertise in analy
 - Template rendering and controller patterns
 - ModelAdmin and GridField customization
 
-You operate with isolated context and read-only use of your tools: Read for files, Bash only for search — `ugrep -rn 'needle' path` for content and `bfs path -type f -name '*.php'` for paths (bare `grep`/`find`/`ls -R` are denied in this setup). Never modify files or git state. Complete your analysis and return structured findings to the orchestrating agent.
+You operate with isolated context and read-only use of your tools: Read for files, Bash only for read-only search commands. Never modify files or git state. Complete your analysis and return structured findings to the orchestrating agent.
 </context>
 
 <project-context>
 ## SilverStripe Grid — Project-Specific Conventions
 
-This project is `wedevelopnl/silverstripe-grid`, a SilverStripe 6 grid content-block module (it conflicts with, and replaces, `dnadesign/silverstripe-elemental`). The authoritative rules live in the project CLAUDE.md (Element Hierarchy, Shared Blocks, PHP Conventions, Gotchas) — read it rather than relying on this summary. When providing advice, apply these project-specific rules:
+This project is `wedevelopnl/silverstripe-grid`, a SilverStripe 6 grid content-block module (it conflicts with, and replaces, `dnadesign/silverstripe-elemental`). The project CLAUDE.md is the authority on its conventions — read the relevant sections before advising, and apply them over generic SilverStripe practice:
 
-### Dependency Injection
-- Follow the PHP Conventions in CLAUDE.md: `private static array $dependencies` property injection for controllers and DataObjects (the framework instantiates them without DI args); constructor injection with explicit `constructor:` YAML (see `_config/hierarchy.yml`) for services.
-- Prefer injection over `Injector::inst()->get()`. `src/` does use the locator where the framework offers no DI hook (extensions, a `DBComposite` field, value objects) and `Injector::inst()->create()` to instantiate a class chosen at runtime — follow that, with a comment saying why, rather than inventing new locator calls in injectable classes.
-
-### Result Pattern (NOT Exceptions)
-- Service-layer validation returns `Result` objects: `Result::ok($value)` / `Result::fail($errors)`.
-- **Never throw exceptions for expected validation failures** — this breaks the controller's error-handling flow and produces 500s instead of structured error responses.
-- Boundary: infrastructure failures (DB down) → exceptions; validation failures → `Result::fail()`.
-- Used in: `GridElementService`, `ElementPlacementService`, `SharedBlockService`, `GridSettingsService`, `ReorderValidator`, `HierarchyValidationService`.
-
-### Element Hierarchy
-- Strict three-level: Page → `Section` → `Row` → `Column` → content elements (`src/Model/`, all extending `GridElement`). Shared blocks (`SharedBlock` / `SharedBlockReference`) add placement rules — see Shared Blocks in CLAUDE.md.
-- Auto-scaffolding: writing a Section creates Row+Column automatically (DRAFT stage), in `GridElement::onAfterWrite()`.
-- Hierarchy rules are hardcoded in `src/Value/ContainerType.php` (`canBeRoot()`, `allowedChildClass()`, `isChildAllowed()`) — there is no per-class YAML for them.
-- Enforcement: `HierarchyValidationExtension` → `HierarchyValidationService` at write time; `ReorderValidator` at placement time (called by `ElementPlacementService`). Both share `PlacementRulesTrait::checkPlacementRules()`.
-
-### Grid Adapter System
-- `GridAdapterInterface` + `ContentLayoutAdapterInterface`, both implemented by the config-driven `GridAdapter` base class, whose `private static` Configurable properties are the YAML-overridable surface.
-- `Viewport` is a `final readonly class` (NOT an enum). Each adapter defines its own viewport set.
-- Two bundled presets: Bootstrap, Tailwind — zero-method subclasses, selected by the required `SS_GRID_ADAPTER` env var.
-- DI binding in `_config/grid.yml`, consumers depend on interface only.
-
-### E2E Test Fixtures
-- Provided by the `wedevelopnl/silverstripe-e2e` dev dependency (`WeDevelop\E2e\Fixtures\FixtureController` / `FixtureLoader`); the grid only registers its fixtures and `config_overrides` in `_config/dev.yml`.
-- Endpoint `/dev/e2e-fixtures` (load/reset), gated to the dev environment by the module.
-- YAML fixtures are written top-down (page → section → row → column → leaf); `config_overrides` forces `auto_scaffold = false` on `Section` and `Row` during fixture writes. Protocol: `docs/testing/e2e-fixtures.md`.
-
-### PHPStan
-- Level max + 100% type coverage enforced.
-- Use `> 0` for `positive-int` narrowing (NOT `!== 0`).
-- Prefer stubs in `phpstan/stubs/` over `@phpstan-ignore` for framework limitations.
+- **PHP Conventions** — dependency injection (`$dependencies` for controllers and DataObjects, explicit YAML `constructor:` wiring for services, the locator only where no DI hook exists), the Result pattern (never throw for expected validation failures), PHPStan type precision.
+- **Element Hierarchy** — Page → `Section` → `Row` → `Column` → content, the hardcoded `ContainerType` rules, auto-scaffolding, zones, validation at write time and at reorder time.
+- **Shared Blocks** — the placement matrix, publishing, deletion across Fluent locales, permissions.
+- **Grid Adapter System** — `SS_GRID_ADAPTER` selection, the presets, the override strategy.
+- **E2E Fixture Ordering** — and the protocol in `docs/testing/e2e-fixtures.md`.
+- **Gotchas** — the SilverStripe 6 and grid-domain traps.
 </project-context>
 
 <instructions>

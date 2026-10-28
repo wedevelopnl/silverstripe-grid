@@ -88,8 +88,9 @@ const origin = await activateDragByTitle(page, 'Row A1');
 await dropAndSettle(page, targetX, targetY, 'A1 before B1');
 
 // Settlement around a drop you release yourself (register BEFORE the release)
+const reorder = await startDrag(page, sourceLocator, targetLocator);
 const settle = waitForMutationSettlement(page, 'reorder within main');
-await drag.release();
+await reorder.release();
 await settle();
 ```
 
@@ -211,15 +212,16 @@ Check `_config/dev.yml` for the current fixture list — it is the source of tru
 | `complex-page` | Mixed versioned states: published, draft-only, modified |
 | `multi-zone` | MultiZonePage with `main` and `sidebar` zones |
 | `media-elements` | Content with media/image elements |
-| `viewport-cascade` / `mobile-column-width` | Columns whose GridSettings exercise per-viewport overrides |
-| `shared-blocks` | Library blocks placed on two pages |
+| `viewport-cascade` | One full-width column with no overrides; the spec sets them through the UI |
+| `mobile-column-width` | Columns with per-viewport GridSettings overrides |
+| `shared-blocks` | Pages A–C; a section-rooted block placed on A and B, plus an unplaced column-rooted block |
 | `userform-element` | Form element — registered only in the optional-modules testbed (`grid-dev-userforms` block) |
 
 ### Creating a new fixture
 
 #### 1. Write the YAML file
 
-Create at `tests/E2E/Fixture/{Name}.yml`. Use top-down ordering — parents before children — so `=>ClassName.identifier` references resolve. Auto-scaffolding is suppressed during fixture writes (`FixtureLoader.config_overrides` in `_config/dev.yml` sets `auto_scaffold: false` on `Section` and `Row`), so no duplicate children are created. Full protocol: `docs/testing/e2e-fixtures.md`.
+Create at `tests/E2E/Fixture/{Name}.yml`. Order it top-down and rely on the suppressed auto-scaffolding as the E2E Fixture Ordering rules in CLAUDE.md describe. Full protocol: `docs/testing/e2e-fixtures.md`.
 
 ```yaml
 Page:
@@ -327,8 +329,8 @@ Global setup (`tests/E2E/global.setup.ts`) authenticates as `admin`/`admin` and 
 
 - `workers: 1`, `fullyParallel: false` — specs run serially
 - `retries: 2` in CI, `1` locally; trace captured on first retry
-- Chromium locally; Firefox projects are added only in CI
+- Chromium locally; Firefox projects are added only in CI (`playwright.config.ts`; the modules config is Chromium-only everywhere)
 - Self-signed certs: `ignoreHTTPSErrors: true`
-- Base URL from `E2E_BASE_URL` env var or `WEB_PORT` in `.docker/.env`
+- Base URL from `E2E_BASE_URL` env var or `WEB_PORT` in `.docker/.env`; the modules config reads `MODULES_WEB_PORT` only
 - Run specific spec: `npx playwright test specs/{file}`
 - Run full suite: `task test-e2e`

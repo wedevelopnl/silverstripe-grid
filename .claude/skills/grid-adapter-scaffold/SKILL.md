@@ -47,7 +47,7 @@ Row class format: `%d` = column count (unused arg ignored for static strings lik
 
 `base_viewport_key` names the smallest viewport (`min_width` 0, e.g. `'xs'`); that viewport uses the base format strings (no viewport infix). All other viewports use the responsive format strings. The base format strings also back `getBaseWidthClass()` / `getBaseOffsetClass()`.
 
-It must never be `null`, and must not be filtered out via `enabled_viewports`: rows declare their grid unprefixed, so a prefixed class at the smallest viewport leaves 0px upwards unstyled and collapses every column to one grid track (see the `base_viewport_key` docblock in `GridAdapter.php` and the Grid Adapter rules in CLAUDE.md).
+It must never be `null` nor filtered out via `enabled_viewports` — the Grid Adapter rules in CLAUDE.md and the `base_viewport_key` docblock in `GridAdapter.php` say why.
 
 ## Step 3: Select the Adapter
 
@@ -58,9 +58,8 @@ The active adapter is chosen by the required `SS_GRID_ADAPTER` environment varia
 SS_GRID_ADAPTER="WeDevelop\Grid\Adapter\{Name}Adapter"
 ```
 
-- The class must implement BOTH `GridAdapterInterface` and `ContentLayoutAdapterInterface` (the same singleton is aliased to both); subclassing `GridAdapter` satisfies both. The resolver throws at boot otherwise.
+- What the value accepts and when it throws: the Grid Adapter rules in CLAUDE.md. Subclassing `GridAdapter` satisfies both required interfaces.
 - A preset bundled in this module is selectable by short name only once it is added to `GridAdapterResolver::PRESETS` (today `bootstrap` and `tailwind`).
-- Locally, `.docker/env.sh` seeds `SS_GRID_ADAPTER` into `.docker/.env`; edit it there to switch.
 
 ## Step 4: Verify
 
