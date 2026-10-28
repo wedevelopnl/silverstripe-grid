@@ -138,7 +138,7 @@ Usage never blocks a delete — `SharedBlock::canDelete()` does not veto on it, 
 | `SharedBlockDeleteMode` | Effect |
 |---|---|
 | `Remove` | Placements are archived with the block |
-| `Unshare` | Each placement is first replaced with an independent copy (the detach mechanism, with auto-scaffolding suppressed so the copy matches the block exactly); the copy is published wherever the placement was live. Refused (`UNSHARE_EMPTY_BLOCK`) when no locale that places the block has a root left to copy |
+| `Unshare` | Each placement is first replaced with an independent copy (the detach mechanism, with auto-scaffolding suppressed so the copy matches the block exactly); the copy is published wherever the placement was live. A placement left on live alone (its page's draft already dropped it) gets a live-only copy, so visitors see no change until the page's next publish takes it off live. Refused (`UNSHARE_EMPTY_BLOCK`) when no locale that places the block has a root left to copy |
 
 Both reach live without republishing the consuming pages.
 
