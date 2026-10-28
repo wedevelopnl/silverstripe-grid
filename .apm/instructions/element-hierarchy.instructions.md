@@ -115,14 +115,13 @@ Violation throws `ValidationException`, preventing the database write.
 
 ### At Reorder Time: `ReorderValidator`
 
-Placement-time only, before the shared rules: a reference to a block with no root fails `BLOCK_EMPTY`.
-
 Called by `ElementPlacementService` (used for both `reorder()` and `insertAfter()` paths, including placement of newly-written elements from `GridElementService`):
 
-1. Same-parent moves short-circuit to ok — hierarchy cannot have changed
+1. Same-parent moves short-circuit to ok — hierarchy cannot have changed, and an already-placed reference whose block was later emptied keeps its place
 2. Source and target shared contexts must match, else fail `SHARED_BOUNDARY`. An unparented (fresh) element has no source context and skips this check
-3. Then the shared placement rules above
-4. Returns `Result::fail()` for violations (uses Result pattern, not exceptions)
+3. A reference to a block with no root fails `BLOCK_EMPTY` (placement-time only — not one of the shared rules)
+4. Then the shared placement rules above
+5. Returns `Result::fail()` for violations (uses Result pattern, not exceptions)
 
 ## Integration Test Implications
 
