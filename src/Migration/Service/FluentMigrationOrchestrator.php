@@ -62,11 +62,18 @@ final readonly class FluentMigrationOrchestrator
         $default = Locale::getDefault();
         $defaultCode = $default?->Locale;
 
+        $plan = $this->localePlan($model);
+        $chains = [];
+        foreach ($plan as $localeCode => $locale) {
+            $chains[$localeCode] = $this->chainOf($locale, $localeCode);
+        }
+
         $summaries = [];
-        foreach ($this->localePlan($model) as $localeCode => $locale) {
+        foreach ($plan as $localeCode => $locale) {
             $localeId = $locale->ID;
-            $chain = $this->chainOf($locale, $localeCode);
+            $chain = $chains[$localeCode];
             $isDefault = $localeCode === $defaultCode;
+            $otherLocaleChains = $isDefault ? \array_values(\array_diff_key($chains, [$localeCode => true])) : [];
             $summaries[$localeCode] = FluentState::singleton()->withState(
                 function (FluentState $state) use (
                     $localeCode,
@@ -79,6 +86,7 @@ final readonly class FluentMigrationOrchestrator
                     $dryRun,
                     $pageIds,
                     $isDefault,
+                    $otherLocaleChains,
                     $stopOnFirstFailure,
                 ): MigrationSummary {
                     $state->setLocale($localeCode);
@@ -88,7 +96,15 @@ final readonly class FluentMigrationOrchestrator
                         'default' => $isDefault ? ' (default)' : '',
                     ]);
 
-                    $source = new LocaleScopedLegacySource($this->reader, $model, $localeCode, $localeId, $chain, $isDefault);
+                    $source = new LocaleScopedLegacySource(
+                        $this->reader,
+                        $model,
+                        $localeCode,
+                        $localeId,
+                        $chain,
+                        $isDefault,
+                        $otherLocaleChains,
+                    );
                     $service = new GridMigrationService(
                         $source,
                         $this->mapper,

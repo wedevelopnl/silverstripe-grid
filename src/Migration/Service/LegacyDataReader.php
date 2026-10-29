@@ -72,13 +72,13 @@ final class LegacyDataReader implements LegacyElementSource
     }
 
     /**
-     * @param non-empty-list<non-empty-string> $chain
+     * @param non-empty-list<array{non-empty-list<non-empty-string>, bool, bool}> $passes
      * @param list<int>|null $pageIds
      * @return list<SkippedPage>
      */
-    public function getSkippedPagesInLocale(array $chain, bool $isDefault, bool $withSharedAreaTables, ?array $pageIds = null): array
+    public function getSkippedPagesInLocales(array $passes, ?array $pageIds = null): array
     {
-        return $this->discovery->getSkippedPagesInLocale($chain, $isDefault, $withSharedAreaTables, $pageIds);
+        return $this->discovery->getSkippedPagesInLocales($passes, $pageIds);
     }
 
     public function getSharedAreas(): array

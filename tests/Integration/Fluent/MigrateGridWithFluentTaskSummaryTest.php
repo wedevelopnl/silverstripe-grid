@@ -13,6 +13,7 @@ use WeDevelop\Grid\Extensions\BlockMediaExtension;
 use WeDevelop\Grid\Migration\Task\MigrateGridWithFluentTask;
 use WeDevelop\Grid\Model\ContentElement;
 use WeDevelop\Grid\Model\GridElement;
+use WeDevelop\Grid\Tests\Integration\Migration\Service\TestPage;
 use WeDevelop\Grid\Tests\Integration\Support\TaskRunner;
 
 /**
@@ -26,6 +27,8 @@ final class MigrateGridWithFluentTaskSummaryTest extends FluentMigrationTestCase
     protected static $illegal_extensions = [
         ContentElement::class => [BlockMediaExtension::class],
     ];
+
+    protected static $extra_dataobjects = [TestPage::class];
 
     public function testPrintsOneSummaryLinePerLocaleWhenEachLocaleHasItsOwnArea(): void
     {
@@ -83,6 +86,40 @@ final class MigrateGridWithFluentTaskSummaryTest extends FluentMigrationTestCase
             . "Done: 1 page(s) skipped.\n",
             $result['output'],
         );
+    }
+
+    public function testDoesNotListAPageTheDefaultLocaleSkipsButAnotherLocaleMigrates(): void
+    {
+        $table = DataObject::getSchema()->tableName(TestPage::class);
+        $this->seeder->addElementalAreaColumn($table);
+
+        try {
+            // Was a TestPage, whose area every locale shares; as a Page it has
+            // an area of its own in nl_NL only.
+            $pageId = (int) TestPage::create(['Title' => 'Our team'])->write();
+            $this->seeder->seedPlainElementalPageOnTable($table, $pageId, 500);
+            $this->seeder->changePageClass($pageId, \Page::class);
+            DB::prepared_query('UPDATE "Page" SET "UseElementalGrid" = 1 WHERE "ID" = ?', [$pageId]);
+            $this->seeder->addLocalisedAreaTables('Page');
+            $this->seeder->seedLocalisedArea('Page', $pageId, 'nl_NL', 200);
+            $this->seeder->seedElement(7001, 200, self::CONTENT_CLASS, 1, ['Title' => 'Ons team']);
+            $this->seeder->seedContentMedia(7001);
+
+            $result = TaskRunner::run(new MigrateGridWithFluentTask(), [
+                '--default-viewport' => self::DEFAULT_VIEWPORT,
+                '--zone' => self::ZONE,
+                ...TaskRunner::ACKNOWLEDGED,
+            ]);
+
+            self::assertSame(Command::SUCCESS, $result['exitCode'], $result['output']);
+            self::assertStringEndsWith(
+                "\n[en_US] Migrated 0 page(s) and 0 content block(s); 0 page(s) skipped as already migrated, 0 failed.\n"
+                . "[nl_NL] Migrated 1 page(s) and 1 content block(s); 0 page(s) skipped as already migrated, 0 failed.\n",
+                $result['output'],
+            );
+        } finally {
+            $this->seeder->removeElementalAreaColumn($table);
+        }
     }
 
     public function testRefusesBeforeAnyWriteWhenDevBuildSetThePerLocaleAreaAside(): void

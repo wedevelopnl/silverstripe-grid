@@ -116,19 +116,23 @@ final class LegacyPageDiscovery
     }
 
     /**
-     * {@see getSkippedPages()} among the pages {@see getEligiblePagesInLocale()} considers.
+     * {@see getSkippedPages()} across the locale passes of one run, each as
+     * {@see getEligiblePagesInLocale()} takes it: a page any pass qualifies
+     * gets a grid in that locale, so it is not skipped.
      *
-     * @param non-empty-list<non-empty-string> $chain The locale, then its fallbacks in order
+     * @param non-empty-list<array{non-empty-list<non-empty-string>, bool, bool}> $passes
+     *     chain, isDefault, withSharedAreaTables per pass
      * @param list<int>|null $pageIds
      * @return list<SkippedPage>
      */
-    public function getSkippedPagesInLocale(
-        array $chain,
-        bool $isDefault,
-        bool $withSharedAreaTables,
-        ?array $pageIds = null,
-    ): array {
-        return $this->sortOut($this->localeCandidates($chain, $isDefault, $withSharedAreaTables, $pageIds))[1];
+    public function getSkippedPagesInLocales(array $passes, ?array $pageIds = null): array
+    {
+        $candidates = \array_map(
+            fn (array $pass): array => $this->localeCandidates($pass[0], $pass[1], $pass[2], $pageIds),
+            $passes,
+        );
+
+        return $this->sortOut(\array_merge(...$candidates))[1];
     }
 
     /**
