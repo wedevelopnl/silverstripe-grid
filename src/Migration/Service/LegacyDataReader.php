@@ -8,6 +8,7 @@ use SilverStripe\Core\Extensible;
 use WeDevelop\Grid\Migration\DTO\LegacyElement;
 use WeDevelop\Grid\Migration\DTO\LegacyMediaData;
 use WeDevelop\Grid\Migration\DTO\LegacyRowData;
+use WeDevelop\Grid\Migration\DTO\SkippedPage;
 use WeDevelop\Grid\Migration\Value\LegacyLocalisationModel;
 
 /**
@@ -63,6 +64,21 @@ final class LegacyDataReader implements LegacyElementSource
     public function getEligiblePagesInLocale(array $chain, bool $isDefault, bool $withSharedAreaTables, ?array $pageIds = null): array
     {
         return $this->discovery->getEligiblePagesInLocale($chain, $isDefault, $withSharedAreaTables, $pageIds);
+    }
+
+    public function getSkippedPages(?array $pageIds = null): array
+    {
+        return $this->discovery->getSkippedPages($pageIds);
+    }
+
+    /**
+     * @param non-empty-list<non-empty-string> $chain
+     * @param list<int>|null $pageIds
+     * @return list<SkippedPage>
+     */
+    public function getSkippedPagesInLocale(array $chain, bool $isDefault, bool $withSharedAreaTables, ?array $pageIds = null): array
+    {
+        return $this->discovery->getSkippedPagesInLocale($chain, $isDefault, $withSharedAreaTables, $pageIds);
     }
 
     public function getSharedAreas(): array

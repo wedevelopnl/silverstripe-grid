@@ -91,6 +91,7 @@ final class GridMigrationService
         bool $stopOnFirstFailure = false,
     ): MigrationSummary {
         $eligiblePages = $this->reader->getEligiblePages('draft', $pageIds);
+        $skippedByType = $this->reader->getSkippedPages($pageIds);
         $sharedAreas = $dryRun ? [] : $this->reader->getSharedAreas();
         $blocks = 0;
         $skipped = 0;
@@ -182,7 +183,7 @@ final class GridMigrationService
             Row::config()->set('auto_scaffold', $rowAutoScaffold);
         }
 
-        return new MigrationSummary(\count($succeeded), $blocks, $skipped, \count($failed));
+        return new MigrationSummary(\count($succeeded), $blocks, $skipped, \count($failed), $skippedByType);
     }
 
     /**

@@ -7,12 +7,14 @@ namespace WeDevelop\Grid\Tests\Integration\Migration\Service;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Page;
+use SilverStripe\CMS\Model\RedirectorPage;
 use SilverStripe\Versioned\Versioned;
 use WeDevelop\Grid\Migration\Service\DraftHierarchyWriter;
 use WeDevelop\Grid\Migration\Service\DroppedMediaCollector;
 use WeDevelop\Grid\Migration\Service\ElementGrouper;
 use WeDevelop\Grid\Migration\Service\FieldMapper;
 use WeDevelop\Grid\Migration\DTO\MappedMediaFields;
+use WeDevelop\Grid\Migration\DTO\SkippedPage;
 use WeDevelop\Grid\Migration\Service\GridMigrationService;
 use WeDevelop\Grid\Migration\Service\LegacyDataReader;
 use WeDevelop\Grid\Migration\Service\LivePublisher;
@@ -143,6 +145,28 @@ final class GridMigrationServiceTest extends MigrationTestCase
             'SizeMD' => 4,
         ]);
         $this->seeder->seedContentMedia(1002, ['HTML' => '<p>World</p>']);
+    }
+
+    public function testAPageConvertedToANeverUpgradedTypeGetsNoGridAndIsReportedAsSkipped(): void
+    {
+        $converted = $this->pageId();
+        $kept = $this->pageId('test_page_2');
+        $this->seedStandardPage($converted);
+        $this->seeder->seedPage($kept, 200);
+        $this->seeder->seedElement(2001, 200, self::CONTENT_CLASS, 1, ['Title' => 'Kept']);
+        $this->seeder->seedContentMedia(2001);
+        $this->seeder->changePageClass($converted, RedirectorPage::class);
+
+        $summary = $this->createService()->run(self::DEFAULT_VIEWPORT, self::ZONE, self::VIEWPORT_KEY_MAP);
+
+        self::assertSame(1, $summary->pagesMigrated);
+        self::assertSame(0, $summary->pagesFailed, 'a skipped page is not a failure');
+        self::assertEquals(
+            [new SkippedPage($converted, 'Integration Test Page', RedirectorPage::class, 'this page type is never upgraded')],
+            $summary->skippedByType,
+        );
+        self::assertCount(0, Section::get()->filter('ParentID', $converted), 'the converted page gets no grid');
+        self::assertCount(1, Section::get()->filter('ParentID', $kept));
     }
 
     public function testEndToEndDraftMigrationCreatesHierarchy(): void
