@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace WeDevelop\Grid\Tests\Integration\Fluent;
 
 use PHPUnit\Framework\Attributes\CoversClass;
+use SilverStripe\CMS\Model\RedirectorPage;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\DB;
 use Symfony\Component\Console\Command\Command;
@@ -50,6 +51,36 @@ final class MigrateGridWithFluentTaskSummaryTest extends FluentMigrationTestCase
         self::assertStringEndsWith(
             "\n[en_US] Migrated 1 page(s) and 1 content block(s); 0 page(s) skipped as already migrated, 0 failed.\n"
             . "[nl_NL] Migrated 1 page(s) and 2 content block(s); 0 page(s) skipped as already migrated, 0 failed.\n",
+            $result['output'],
+        );
+    }
+
+    public function testListsASkippedPageOnceForTheWholeRunNotOncePerLocale(): void
+    {
+        $pageId = $this->pageId();
+        $this->seeder->seedPage($pageId, 100);
+        $this->seeder->addLocalisedAreaTables('Page');
+        $this->seeder->seedLocalisedArea('Page', $pageId, 'en_US', 100);
+        $this->seeder->seedLocalisedArea('Page', $pageId, 'nl_NL', 200);
+        $this->seeder->seedElement(7000, 100, self::CONTENT_CLASS, 1, ['Title' => 'Summer offers']);
+        $this->seeder->seedContentMedia(7000);
+        $this->seeder->seedElement(7001, 200, self::CONTENT_CLASS, 1, ['Title' => 'Zomeraanbiedingen']);
+        $this->seeder->seedContentMedia(7001);
+        $this->seeder->changePageClass($pageId, RedirectorPage::class);
+
+        $result = TaskRunner::run(new MigrateGridWithFluentTask(), [
+            '--default-viewport' => self::DEFAULT_VIEWPORT,
+            '--zone' => self::ZONE,
+            ...TaskRunner::ACKNOWLEDGED,
+        ]);
+
+        self::assertSame(Command::SUCCESS, $result['exitCode'], $result['output']);
+        self::assertStringEndsWith(
+            "\n[en_US] Migrated 0 page(s) and 0 content block(s); 0 page(s) skipped as already migrated, 0 failed.\n"
+            . "[nl_NL] Migrated 0 page(s) and 0 content block(s); 0 page(s) skipped as already migrated, 0 failed.\n"
+            . "Skipped pages:\n"
+            . "  - Page #{$pageId} \"Integration Test Page\" (RedirectorPage): this page type is never upgraded\n"
+            . "Done: 1 page(s) skipped.\n",
             $result['output'],
         );
     }
