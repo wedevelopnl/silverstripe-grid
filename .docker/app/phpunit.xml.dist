@@ -40,6 +40,9 @@
             <directory>vendor/wedevelopnl/silverstripe-grid/tests/Integration/KeysForCache</directory>
         </testsuite>
     </testsuites>
+    <extensions>
+        <bootstrap class="WeDevelop\Grid\Tests\Support\ReseedParatestWorkers"/>
+    </extensions>
     <source>
         <include>
             <directory suffix=".php">vendor/wedevelopnl/silverstripe-grid/src</directory>
