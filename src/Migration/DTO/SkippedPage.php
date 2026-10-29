@@ -11,6 +11,7 @@ namespace WeDevelop\Grid\Migration\DTO;
 final readonly class SkippedPage
 {
     /**
+     * @param positive-int $pageId
      * @param class-string $pageClassName The page's current (draft) type
      * @param non-empty-string $reason
      */
