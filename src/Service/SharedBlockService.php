@@ -465,16 +465,12 @@ class SharedBlockService
 
         return $this->locales->each(static function (?Locale $locale) use ($block, $blockId): array {
             /** @var list<SharedBlockReference> $references */
-            $references = SharedBlockReference::get()->filter(['BlockID' => $blockId])->toArray();
+            $references = SharedBlockReference::placing($blockId, Versioned::DRAFT)->toArray();
             $draftIds = array_map(static fn (SharedBlockReference $reference): int => (int) $reference->ID, $references);
+            $live = SharedBlockReference::placing($blockId, Versioned::LIVE);
 
             /** @var list<SharedBlockReference> $liveOnly */
-            $liveOnly = Versioned::withVersionedMode(static function () use ($blockId, $draftIds): array {
-                Versioned::set_stage(Versioned::LIVE);
-                $live = SharedBlockReference::get()->filter(['BlockID' => $blockId]);
-
-                return ($draftIds === [] ? $live : $live->exclude(['ID' => $draftIds]))->toArray();
-            });
+            $liveOnly = ($draftIds === [] ? $live : $live->exclude(['ID' => $draftIds]))->toArray();
 
             /** @var array<int, SiteTree> $pages */
             $pages = [];
@@ -492,16 +488,11 @@ class SharedBlockService
             // Both modes delete this locale's placements and its block content,
             // so either one, on either stage, makes the locale one the delete
             // writes into.
-            $held = $references !== [] || $liveOnly !== [] || $root !== null || Versioned::withVersionedMode(
-                static function () use ($blockId): bool {
-                    Versioned::set_stage(Versioned::LIVE);
-
-                    return GridElement::get()->filter([
-                        'ParentID' => $blockId,
-                        'ParentClass' => SharedBlock::class,
-                    ])->exists();
-                },
-            );
+            $held = $references !== [] || $liveOnly !== [] || $root !== null || Versioned::get_by_stage(
+                GridElement::class,
+                Versioned::LIVE,
+                ['ParentID' => $blockId, 'ParentClass' => SharedBlock::class],
+            )->exists();
 
             // Fluent drops a locale-restricted group from the member while
             // another locale is active, and Permission caches per member, so
