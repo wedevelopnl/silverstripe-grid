@@ -8,16 +8,19 @@ use InvalidArgumentException;
 use Override;
 use Psr\Log\LoggerInterface;
 use RuntimeException;
+use SilverStripe\Core\ClassInfo;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Dev\BuildTask;
 use SilverStripe\PolyExecution\PolyOutput;
 use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Formatter\OutputFormatter;
 use Symfony\Component\Console\Helper\QuestionHelper;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Question\ConfirmationQuestion;
 use WeDevelop\Grid\Contract\GridAdapterInterface;
 use WeDevelop\Grid\Migration\DTO\MigrationSummary;
+use WeDevelop\Grid\Migration\DTO\SkippedPage;
 use WeDevelop\Grid\Migration\Service\DroppedMediaCollector;
 use WeDevelop\Grid\Migration\Service\ElementGrouper;
 use WeDevelop\Grid\Migration\Service\ElementNumberingGuard;
@@ -214,7 +217,9 @@ abstract class AbstractMigrationTask extends BuildTask
         );
 
         $exitCode = Command::SUCCESS;
+        $skippedByType = [];
         foreach ($summaries as $localeCode => $summary) {
+            $skippedByType = [...$skippedByType, ...$summary->skippedByType];
             $output->writeln(\sprintf(
                 '%s%s %d page(s) and %d content block(s); %d page(s) skipped as already migrated, %d failed.',
                 $localeCode === '' ? '' : "[{$localeCode}] ",
@@ -233,8 +238,35 @@ abstract class AbstractMigrationTask extends BuildTask
 
         $this->reportDroppedMedia($droppedMedia, $output, $logger);
         $this->reportSharedAreas($sharedAreas, $output);
+        $this->reportSkippedPages($skippedByType, $dryRun, $output);
 
         return $exitCode;
+    }
+
+    /**
+     * Every page left without a grid because its current type no longer
+     * carries its legacy blocks, one line each. Skipping is an expected
+     * outcome, so it never fails the run.
+     *
+     * @param list<SkippedPage> $pages
+     */
+    private function reportSkippedPages(array $pages, bool $dryRun, PolyOutput $output): void
+    {
+        if ($pages === []) {
+            return;
+        }
+
+        $output->writeln('Skipped pages:');
+        foreach ($pages as $page) {
+            $output->writeln(\sprintf(
+                '  - Page #%d "%s" (%s): %s',
+                $page->pageId,
+                OutputFormatter::escape($page->title),
+                ClassInfo::shortName($page->pageClassName),
+                $page->reason,
+            ));
+        }
+        $output->writeln(\sprintf('%s %d page(s) skipped.', $dryRun ? 'Dry run:' : 'Done:', \count($pages)));
     }
 
     /**
