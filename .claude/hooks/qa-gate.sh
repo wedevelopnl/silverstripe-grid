@@ -15,9 +15,39 @@ if [[ ! "$command" =~ $push_pattern ]]; then
   exit 0
 fi
 
+project_root="$(git rev-parse --show-toplevel 2>/dev/null || echo "${CLAUDE_PROJECT_DIR:-.}")"
+
+# A push after a `cd` elsewhere, as in `(cd ~/other-repo && git push)`, is that
+# repository's push: replay the cds before it and gate only pushes of this one
+before_push="${command%%"${BASH_REMATCH[0]}"*}"
+cd_pattern=$'(^|[;&|(\n])[[:space:]]*cd[[:space:]]+([^;&|)\n]+)'
+cd_targets=()
+while [[ "$before_push" =~ $cd_pattern ]]; do
+  target="${BASH_REMATCH[2]}"
+  target="${target%"${target##*[![:space:]]}"}"
+  target="${target#[\"\']}"
+  target="${target%[\"\']}"
+  if [[ "$target" == "~"* ]]; then
+    target="$HOME${target#\~}"
+  fi
+  cd_targets+=("$target")
+  before_push="${before_push#*"${BASH_REMATCH[0]}"}"
+done
+if ((${#cd_targets[@]} > 0)); then
+  push_root="$(
+    for target in "${cd_targets[@]}"; do
+      cd "$target" 2>/dev/null || exit 0
+    done
+    git rev-parse --show-toplevel 2>/dev/null || true
+  )"
+  if [[ "$push_root" != "$project_root" ]]; then
+    exit 0
+  fi
+fi
+
 echo "Pre-push QA gate: running linters before push..." >&2
 
-cd "$(git rev-parse --show-toplevel 2>/dev/null || echo "${CLAUDE_PROJECT_DIR:-.}")"
+cd "$project_root"
 
 # vite/esbuild output is not byte-identical across Node majors. The dist diff
 # check below is only meaningful when the local Node major matches CI's
