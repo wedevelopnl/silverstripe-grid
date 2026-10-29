@@ -23,10 +23,12 @@ class RejectMarkedPageExtension extends Extension implements TestOnly
 {
     public const string FAIL_MARKER = 'FAIL_PAGE_WRITE';
 
+    public const string MESSAGE = 'Marked page rejected by the test extension.';
+
     public function updateValidate(ValidationResult $result): void
     {
         if ((string) $this->getOwner()->Title === self::FAIL_MARKER) {
-            $result->addError('Marked page rejected by the test extension.');
+            $result->addError(self::MESSAGE);
         }
     }
 }

@@ -19,6 +19,7 @@ use WeDevelop\Grid\Tests\Integration\Support\DisablesAutoScaffolding;
 use WeDevelop\Grid\Tests\Integration\Support\GridTreeFactory;
 use WeDevelop\Grid\Tests\Integration\Support\RejectMarkedPageExtension;
 use WeDevelop\Grid\Value\SharedBlockDeleteMode;
+use WeDevelop\Grid\Value\ValidationError;
 
 /**
  * Pins that a shared block delete and the consuming pages' new draft versions
@@ -59,7 +60,11 @@ final class SharedBlockDeleteRollbackTest extends SapphireTest
 
         $result = Injector::inst()->get(SharedBlockService::class)->delete($block, SharedBlockDeleteMode::Remove);
 
-        self::assertTrue($result->isErr(), 'the page write failure must surface');
+        self::assertSame(
+            [RejectMarkedPageExtension::MESSAGE],
+            array_map(static fn (ValidationError $error): string => $error->message, $result->errors()),
+            'the failure must be the page write, which runs after the block is archived',
+        );
         self::assertNotNull(SharedBlock::get()->byID($block->ID), 'the block survives');
         self::assertNotNull(SharedBlockReference::get()->byID($reference->ID), 'and so does its placement');
     }
