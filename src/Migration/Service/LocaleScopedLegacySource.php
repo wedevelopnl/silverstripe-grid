@@ -39,6 +39,19 @@ final readonly class LocaleScopedLegacySource implements LegacyElementSource
         return $this->reader->getEligiblePagesInLocale($this->chain, $this->isDefault, $this->migratesSharedAreas(), $pageIds);
     }
 
+    /**
+     * Reported from the default locale's pass only, so a skipped page is
+     * listed once per run rather than once per locale.
+     */
+    public function getSkippedPages(?array $pageIds = null): array
+    {
+        if (!$this->isDefault) {
+            return [];
+        }
+
+        return $this->reader->getSkippedPagesInLocale($this->chain, true, $this->migratesSharedAreas(), $pageIds);
+    }
+
     public function getSharedAreas(): array
     {
         return $this->reader->getSharedAreasInLocale($this->chain, $this->isDefault, $this->migratesSharedAreas());

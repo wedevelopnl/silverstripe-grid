@@ -16,11 +16,14 @@ final readonly class MigrationSummary
      *     rows (rows become the Section/Row/Column structure, not blocks)
      * @param int<0, max> $pagesSkipped Pages the idempotency guard skipped as already migrated
      * @param int<0, max> $pagesFailed
+     * @param list<SkippedPage> $skippedByType Pages left without a grid because their current
+     *     type no longer carries their legacy content blocks; never counted as failed
      */
     public function __construct(
         public int $pagesMigrated,
         public int $blocksMigrated,
         public int $pagesSkipped,
         public int $pagesFailed,
+        public array $skippedByType = [],
     ) {}
 }
