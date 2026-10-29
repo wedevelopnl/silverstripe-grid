@@ -6,6 +6,9 @@ namespace WeDevelop\Grid\Tests\Integration\Migration\Task;
 
 use Page;
 use PHPUnit\Framework\Attributes\CoversClass;
+use SilverStripe\CMS\Model\RedirectorPage;
+use SilverStripe\CMS\Model\VirtualPage;
+use SilverStripe\ORM\DB;
 use SilverStripe\Versioned\Versioned;
 use Symfony\Component\Console\Command\Command;
 use WeDevelop\Grid\Migration\Service\DraftHierarchyWriter;
@@ -402,6 +405,99 @@ final class MigrateGridTaskTest extends MigrationTestCase
         self::assertCount(0, Section::get());
         self::assertCount(0, Row::get());
         self::assertCount(0, Column::get());
+    }
+
+    public function testADryRunListsEveryPageWhoseTypeIsNeverUpgraded(): void
+    {
+        [$redirector, $virtual] = $this->seedConvertedPages();
+
+        $result = $this->executeTaskRaw([
+            '--default-viewport' => 'MD',
+            '--zone' => 'main',
+            '--dry-run' => true,
+        ]);
+
+        self::assertSame(Command::SUCCESS, $result['exitCode'], $result['output']);
+        self::assertStringEndsWith(
+            "\nWould migrate 0 page(s) and 0 content block(s); 0 page(s) skipped as already migrated, 0 failed.\n"
+            . "Skipped pages:\n"
+            . "  - Page #{$redirector} \"Integration Test Page\" (RedirectorPage): this page type is never upgraded\n"
+            . "  - Page #{$virtual} \"Integration Test Page 2\" (VirtualPage): this page type is never upgraded\n"
+            . "Dry run: 2 page(s) skipped.\n",
+            $result['output'],
+        );
+    }
+
+    public function testARealRunListsTheSkippedPagesGivesThemNoGridAndSucceeds(): void
+    {
+        [$redirector, $virtual] = $this->seedConvertedPages();
+
+        $result = TaskRunner::run(new MigrateGridTask(), [
+            '--default-viewport' => 'MD',
+            '--zone' => 'main',
+            ...TaskRunner::ACKNOWLEDGED,
+        ]);
+
+        self::assertSame(Command::SUCCESS, $result['exitCode'], $result['output']);
+        self::assertStringEndsWith(
+            "\nMigrated 0 page(s) and 0 content block(s); 0 page(s) skipped as already migrated, 0 failed.\n"
+            . "Skipped pages:\n"
+            . "  - Page #{$redirector} \"Integration Test Page\" (RedirectorPage): this page type is never upgraded\n"
+            . "  - Page #{$virtual} \"Integration Test Page 2\" (VirtualPage): this page type is never upgraded\n"
+            . "Done: 2 page(s) skipped.\n",
+            $result['output'],
+        );
+        self::assertCount(0, Section::get());
+    }
+
+    public function testASelectionListsOnlyTheSelectedPagesThatWereSkipped(): void
+    {
+        [$redirector] = $this->seedConvertedPages();
+
+        $result = $this->executeTaskRaw([
+            '--default-viewport' => 'MD',
+            '--zone' => 'main',
+            '--dry-run' => true,
+            '--page-ids' => (string) $redirector,
+        ]);
+
+        self::assertStringEndsWith(
+            "\nSkipped pages:\n"
+            . "  - Page #{$redirector} \"Integration Test Page\" (RedirectorPage): this page type is never upgraded\n"
+            . "Dry run: 1 page(s) skipped.\n",
+            $result['output'],
+        );
+    }
+
+    public function testASkippedPageTitleIsPrintedVerbatimNotAsConsoleMarkup(): void
+    {
+        [$redirector] = $this->seedConvertedPages();
+        DB::prepared_query('UPDATE "SiteTree" SET "Title" = ? WHERE "ID" = ?', ['<error>Sale</error>', $redirector]);
+
+        $result = $this->executeTaskRaw([
+            '--default-viewport' => 'MD',
+            '--zone' => 'main',
+            '--dry-run' => true,
+        ]);
+
+        self::assertStringContainsString("  - Page #{$redirector} \"<error>Sale</error>\" (RedirectorPage)", $result['output']);
+    }
+
+    /**
+     * Two pages with legacy blocks, converted to a redirector and a virtual page.
+     *
+     * @return array{int, int} the redirector page's ID, the virtual page's ID
+     */
+    private function seedConvertedPages(): array
+    {
+        $redirector = $this->pageId();
+        $virtual = $this->pageId('test_page_2');
+        $this->seedStandardPage($redirector);
+        $this->seeder->seedPage($virtual, 200);
+        $this->seeder->changePageClass($redirector, RedirectorPage::class);
+        $this->seeder->changePageClass($virtual, VirtualPage::class);
+
+        return [$redirector, $virtual];
     }
 
     public function testPageIdsFilterRestrictsMigration(): void
