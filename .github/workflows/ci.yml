@@ -175,18 +175,20 @@ jobs:
         run: $COMPOSE build ${{ matrix.service }}
       - name: Start services
         run: $COMPOSE up -d --wait ${{ matrix.service }}
+      # paratest runs one worker per runner core, each on its own temp database
+      # (tests/Support/ReseedParatestWorkers keeps their names apart).
       # Base variant: no optional modules, non-module suites only (mirrors `task test`), no coverage gate.
       - if: matrix.variant == 'base'
         name: Run tests (no optional modules)
         run: >-
-          $COMPOSE exec ${{ matrix.service }} vendor/bin/phpunit
+          $COMPOSE exec ${{ matrix.service }} vendor/bin/paratest
           --testsuite unit,integration,functional
           --log-junit coverage/junit.xml
       # Modules variant: all suites with coverage + 90% threshold gate.
       - if: matrix.variant == 'modules'
         name: Run all tests with coverage
         run: >-
-          $COMPOSE exec ${{ matrix.service }} vendor/bin/phpunit
+          $COMPOSE exec ${{ matrix.service }} vendor/bin/paratest
           --log-junit coverage/junit.xml
           --coverage-clover coverage/clover.xml
       - if: matrix.variant == 'modules'
