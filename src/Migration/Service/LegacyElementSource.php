@@ -18,7 +18,7 @@ use WeDevelop\Grid\Migration\DTO\SkippedPage;
  * of its own in the locale being migrated.
  *
  * @phpstan-type EligiblePage array{
- *     pageId: int,
+ *     pageId: positive-int,
  *     areaId: int,
  *     liveAreaId: int,
  *     pageClassName: class-string,

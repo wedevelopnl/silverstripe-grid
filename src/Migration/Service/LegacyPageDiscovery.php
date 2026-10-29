@@ -261,10 +261,12 @@ final class LegacyPageDiscovery
         foreach (DB::prepared_query($sql, $params) as $row) {
             /** @var array<string, int|string> $row */
             $areaId = (int) $row['areaId'];
+            /** @var positive-int $pageId */
+            $pageId = (int) $row['pageId'];
             /** @var class-string $pageClassName */
             $pageClassName = (string) $row['pageClassName'];
             $pages[] = [
-                'pageId' => (int) $row['pageId'],
+                'pageId' => $pageId,
                 'areaId' => $areaId,
                 'liveAreaId' => $areaId,
                 'pageClassName' => $pageClassName,
@@ -314,6 +316,7 @@ final class LegacyPageDiscovery
         $pages = [];
         foreach (DB::prepared_query($sql, $params) as $row) {
             /** @var array<string, int|string|null> $row */
+            /** @var positive-int $pageId */
             $pageId = (int) $row['pageId'];
             $source = $this->sourceLocale($draftAreas[$pageId] ?? [], $chain);
             if ($source !== null) {
@@ -426,7 +429,7 @@ final class LegacyPageDiscovery
     {
         /** @var array<int, EligiblePage> $eligible */
         $eligible = [];
-        /** @var array<int, array{class-string, non-empty-string}> $skipped page ID → [class, reason] */
+        /** @var array<positive-int, array{class-string, non-empty-string}> $skipped page ID → [class, reason] */
         $skipped = [];
         foreach ($candidates as [$baseTable, $pages]) {
             foreach ($pages as $page) {
@@ -482,7 +485,7 @@ final class LegacyPageDiscovery
     }
 
     /**
-     * @param array<int, array{class-string, non-empty-string}> $skipped page ID → [class, reason]
+     * @param array<positive-int, array{class-string, non-empty-string}> $skipped page ID → [class, reason]
      * @return list<SkippedPage> in page order
      */
     private function skippedPages(array $skipped): array
