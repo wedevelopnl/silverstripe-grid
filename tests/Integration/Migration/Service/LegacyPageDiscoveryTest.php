@@ -339,7 +339,42 @@ final class LegacyPageDiscoveryTest extends MigrationTestCase
         self::assertSame([], $this->discovery->getEligiblePagesInLocale(['nl_NL'], false, false));
         self::assertEquals(
             [new SkippedPage($pageId, 'Integration Test Page', RedirectorPage::class, 'this page type is never upgraded')],
-            $this->discovery->getSkippedPagesInLocale(['en_US'], true, true),
+            $this->discovery->getSkippedPagesInLocales([[['en_US'], true, true], [['nl_NL'], false, false]]),
+        );
+    }
+
+    public function testAPageAnotherLocalesPassQualifiesIsNotSkipped(): void
+    {
+        $table = DataObject::getSchema()->tableName(TestPage::class);
+        $this->seeder->addElementalAreaColumn($table);
+
+        try {
+            $pageId = (int) TestPage::create(['Title' => 'Our team'])->write();
+            $this->seeder->seedPlainElementalPageOnTable($table, $pageId, 500);
+            $this->seeder->changePageClass($pageId, Page::class);
+            DB::prepared_query('UPDATE "Page" SET "UseElementalGrid" = 1 WHERE "ID" = ?', [$pageId]);
+            $this->seeder->addLocalisedAreaTables('Page');
+            $this->seeder->seedLocalisedArea('Page', $pageId, 'nl_NL', 200);
+
+            self::assertNotSame([], $this->discovery->getSkippedPagesInLocales([[['en_US'], true, true]]));
+            self::assertSame([], $this->discovery->getSkippedPagesInLocales([[['en_US'], true, true], [['nl_NL'], false, false]]));
+        } finally {
+            $this->seeder->removeElementalAreaColumn($table);
+        }
+    }
+
+    public function testAPageSkippedOnlyThroughAnotherLocalesAreaIsListed(): void
+    {
+        $pageId = $this->pageId();
+        DB::prepared_query('UPDATE "Page" SET "UseElementalGrid" = 1 WHERE "ID" = ?', [$pageId]);
+        $this->seeder->addLocalisedAreaTables('Page');
+        $this->seeder->seedLocalisedArea('Page', $pageId, 'nl_NL', 200);
+        $this->seeder->changePageClass($pageId, RedirectorPage::class);
+
+        self::assertSame([], $this->discovery->getSkippedPagesInLocales([[['en_US'], true, true]]));
+        self::assertEquals(
+            [new SkippedPage($pageId, 'Integration Test Page', RedirectorPage::class, 'this page type is never upgraded')],
+            $this->discovery->getSkippedPagesInLocales([[['en_US'], true, true], [['nl_NL'], false, false]]),
         );
     }
 

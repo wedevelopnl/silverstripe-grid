@@ -208,7 +208,7 @@ Skipped pages:
 Done: 2 page(s) skipped.
 ```
 
-`migrate-grid-with-fluent` lists a skipped page once per run, not once per locale.
+`migrate-grid-with-fluent` lists a skipped page once per run, not once per locale, and only when no locale gives it a grid: a page whose current type has an area of its own in one locale is migrated in that locale and not listed.
 
 If a run finishes with failures, the summary line is followed by `Check logs for details.`, the task exits with a non-zero status and the failing page IDs are logged as errors. Pages that failed remain un-migrated and can be re-run after the cause is fixed.
 

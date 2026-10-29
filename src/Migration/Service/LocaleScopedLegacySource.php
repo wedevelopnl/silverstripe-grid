@@ -21,6 +21,8 @@ final readonly class LocaleScopedLegacySource implements LegacyElementSource
      * @param non-empty-string $localeCode
      * @param positive-int $localeId
      * @param non-empty-list<non-empty-string> $chain The locale, then its Fluent fallbacks in order
+     * @param list<non-empty-list<non-empty-string>> $otherLocaleChains The chain of every other
+     *     locale pass in the run; the default locale's source alone needs them, to report skips
      */
     public function __construct(
         private LegacyDataReader $reader,
@@ -29,6 +31,7 @@ final readonly class LocaleScopedLegacySource implements LegacyElementSource
         private int $localeId,
         private array $chain,
         private bool $isDefault,
+        private array $otherLocaleChains = [],
     ) {}
 
     /**
@@ -36,12 +39,13 @@ final readonly class LocaleScopedLegacySource implements LegacyElementSource
      */
     public function getEligiblePages(string $stage, ?array $pageIds = null): array
     {
-        return $this->reader->getEligiblePagesInLocale($this->chain, $this->isDefault, $this->migratesSharedAreas(), $pageIds);
+        return $this->reader->getEligiblePagesInLocale($this->chain, $this->isDefault, $this->migratesSharedAreas($this->isDefault), $pageIds);
     }
 
     /**
-     * Reported from the default locale's pass only, so a skipped page is
-     * listed once per run rather than once per locale.
+     * Reported from the default locale's pass only, judged across every pass
+     * of the run: a skipped page is listed once per run rather than once per
+     * locale, and never when another locale gives it a grid.
      */
     public function getSkippedPages(?array $pageIds = null): array
     {
@@ -49,21 +53,26 @@ final readonly class LocaleScopedLegacySource implements LegacyElementSource
             return [];
         }
 
-        return $this->reader->getSkippedPagesInLocale($this->chain, true, $this->migratesSharedAreas(), $pageIds);
+        $passes = [[$this->chain, true, $this->migratesSharedAreas(true)]];
+        foreach ($this->otherLocaleChains as $chain) {
+            $passes[] = [$chain, false, $this->migratesSharedAreas(false)];
+        }
+
+        return $this->reader->getSkippedPagesInLocales($passes, $pageIds);
     }
 
     public function getSharedAreas(): array
     {
-        return $this->reader->getSharedAreasInLocale($this->chain, $this->isDefault, $this->migratesSharedAreas());
+        return $this->reader->getSharedAreasInLocale($this->chain, $this->isDefault, $this->migratesSharedAreas($this->isDefault));
     }
 
     /**
      * An area every locale shares holds one locale's blocks unless the
      * elements carry their own translations.
      */
-    private function migratesSharedAreas(): bool
+    private function migratesSharedAreas(bool $isDefault): bool
     {
-        return $this->isDefault || $this->model !== LegacyLocalisationModel::None;
+        return $isDefault || $this->model !== LegacyLocalisationModel::None;
     }
 
     public function getElementsForArea(int $areaId, string $stage): array
