@@ -5,10 +5,14 @@ declare(strict_types=1);
 namespace WeDevelop\Grid\Migration\Service;
 
 use InvalidArgumentException;
+use SilverStripe\CMS\Model\RedirectorPage;
 use SilverStripe\CMS\Model\SiteTree;
+use SilverStripe\CMS\Model\VirtualPage;
 use SilverStripe\Core\ClassInfo;
+use SilverStripe\Core\Config\Configurable;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\DB;
+use WeDevelop\Grid\Migration\DTO\SkippedPage;
 
 /**
  * Discovers legacy elemental pages from old database tables using raw SQL.
@@ -24,10 +28,27 @@ use SilverStripe\ORM\DB;
  *
  * When UseElementalGrid is absent, all pages with ElementalAreaID > 0 are eligible.
  *
+ * A page qualifies only through a table its current (draft) type still
+ * carries: converting a page leaves the old type's row, area included, behind.
+ * A page no table qualifies is skipped, with the reason.
+ *
  * @phpstan-import-type EligiblePage from LegacyElementSource
  */
 final class LegacyPageDiscovery
 {
+    use Configurable;
+
+    /**
+     * Page types never given a grid, nor any type built on them, whatever
+     * content blocks a page of that type still points at.
+     *
+     * @var list<class-string<SiteTree>>
+     */
+    private static array $excluded_page_classes = [
+        RedirectorPage::class,
+        VirtualPage::class,
+    ];
+
     /**
      * Instance-level cache for DB::table_list(). Populated on first call to
      * tableHasColumn(); null means not yet fetched.
@@ -56,15 +77,19 @@ final class LegacyPageDiscovery
      */
     public function getEligiblePages(string $stage, ?array $pageIds = null): array
     {
-        // The old elemental extension could be applied to any SiteTree subclass
-        // (Page, HomePage, BlogPage, etc.). Discover which tables have the column
-        // using the class manifest, then query each.
-        $pages = [];
-        foreach ($this->findPageTablesWithColumn('ElementalAreaID') as $baseTable) {
-            $pages = $this->appendUnseen($pages, $this->sharedAreaPages($baseTable, $stage, $pageIds));
-        }
+        return $this->sortOut($this->sharedAreaCandidates($stage, $pageIds))[0];
+    }
 
-        return $pages;
+    /**
+     * Draft pages with legacy content blocks their current type no longer
+     * carries, in page order.
+     *
+     * @param list<int>|null $pageIds
+     * @return list<SkippedPage>
+     */
+    public function getSkippedPages(?array $pageIds = null): array
+    {
+        return $this->sortOut($this->sharedAreaCandidates('draft', $pageIds))[1];
     }
 
     /**
@@ -87,16 +112,58 @@ final class LegacyPageDiscovery
         bool $withSharedAreaTables,
         ?array $pageIds = null,
     ): array {
-        $pages = [];
+        return $this->sortOut($this->localeCandidates($chain, $isDefault, $withSharedAreaTables, $pageIds))[0];
+    }
+
+    /**
+     * {@see getSkippedPages()} among the pages {@see getEligiblePagesInLocale()} considers.
+     *
+     * @param non-empty-list<non-empty-string> $chain The locale, then its fallbacks in order
+     * @param list<int>|null $pageIds
+     * @return list<SkippedPage>
+     */
+    public function getSkippedPagesInLocale(
+        array $chain,
+        bool $isDefault,
+        bool $withSharedAreaTables,
+        ?array $pageIds = null,
+    ): array {
+        return $this->sortOut($this->localeCandidates($chain, $isDefault, $withSharedAreaTables, $pageIds))[1];
+    }
+
+    /**
+     * The old elemental extension could be applied to any SiteTree subclass
+     * (Page, HomePage, BlogPage, etc.), so every page table carrying the
+     * column is read.
+     *
+     * @param list<int>|null $pageIds
+     * @return list<array{string, list<EligiblePage>}> page table → the pages it yields
+     */
+    private function sharedAreaCandidates(string $stage, ?array $pageIds): array
+    {
+        return \array_map(
+            fn (string $baseTable): array => [$baseTable, $this->sharedAreaPages($baseTable, $stage, $pageIds)],
+            $this->findPageTablesWithColumn('ElementalAreaID'),
+        );
+    }
+
+    /**
+     * @param non-empty-list<non-empty-string> $chain
+     * @param list<int>|null $pageIds
+     * @return list<array{string, list<EligiblePage>}> page table → the pages it yields
+     */
+    private function localeCandidates(array $chain, bool $isDefault, bool $withSharedAreaTables, ?array $pageIds): array
+    {
+        $candidates = [];
         foreach ($this->findPageTablesWithColumn('ElementalAreaID') as $baseTable) {
             if ($this->isPerLocaleAreaTable($baseTable)) {
-                $pages = $this->appendUnseen($pages, $this->perLocaleAreaPages($baseTable, $chain, $isDefault, $pageIds));
+                $candidates[] = [$baseTable, $this->perLocaleAreaPages($baseTable, $chain, $isDefault, $pageIds)];
             } elseif ($withSharedAreaTables) {
-                $pages = $this->appendUnseen($pages, $this->sharedAreaPages($baseTable, 'draft', $pageIds));
+                $candidates[] = [$baseTable, $this->sharedAreaPages($baseTable, 'draft', $pageIds)];
             }
         }
 
-        return $pages;
+        return $candidates;
     }
 
     /**
@@ -348,20 +415,90 @@ final class LegacyPageDiscovery
 
     /**
      * A page reachable through more than one page table is taken from the
-     * first table that yields it.
+     * first table that yields it for its current type, so a row its type left
+     * behind never shadows one it still carries. A page no table qualifies is
+     * skipped with the first reason found.
      *
-     * @param list<EligiblePage> $pages
-     * @param list<EligiblePage> $found
-     * @return list<EligiblePage>
+     * @param list<array{string, list<EligiblePage>}> $candidates page table → the pages it yields
+     * @return array{list<EligiblePage>, list<SkippedPage>}
      */
-    private function appendUnseen(array $pages, array $found): array
+    private function sortOut(array $candidates): array
     {
-        $seen = \array_flip(\array_column($pages, 'pageId'));
-        foreach ($found as $page) {
-            if (!isset($seen[$page['pageId']])) {
-                $seen[$page['pageId']] = true;
-                $pages[] = $page;
+        /** @var array<int, EligiblePage> $eligible */
+        $eligible = [];
+        /** @var array<int, array{class-string, non-empty-string}> $skipped page ID → [class, reason] */
+        $skipped = [];
+        foreach ($candidates as [$baseTable, $pages]) {
+            foreach ($pages as $page) {
+                $pageId = $page['pageId'];
+                if (isset($eligible[$pageId])) {
+                    continue;
+                }
+
+                $reason = $this->skipReason($page['pageClassName'], $baseTable);
+                if ($reason === null) {
+                    $eligible[$pageId] = $page;
+                    unset($skipped[$pageId]);
+                } else {
+                    $skipped[$pageId] ??= [$page['pageClassName'], $reason];
+                }
             }
+        }
+
+        return [\array_values($eligible), $this->skippedPages($skipped)];
+    }
+
+    /**
+     * Why a row of `$baseTable` does not qualify a page of `$pageClassName`,
+     * or null when it does. A type missing from the manifest qualifies, as
+     * it always has.
+     *
+     * @param class-string $pageClassName
+     * @return non-empty-string|null
+     */
+    private function skipReason(string $pageClassName, string $baseTable): ?string
+    {
+        if (!\class_exists($pageClassName)) {
+            return null;
+        }
+
+        /** @var list<class-string> $excluded */
+        $excluded = self::config()->get('excluded_page_classes');
+        foreach ($excluded as $excludedClass) {
+            if (\is_a($pageClassName, $excludedClass, true)) {
+                return 'this page type is never upgraded';
+            }
+        }
+
+        $areaClass = DataObject::getSchema()->tableClass($baseTable);
+        if ($areaClass === null || \is_a($pageClassName, $areaClass, true)) {
+            return null;
+        }
+
+        return \sprintf(
+            'its current type no longer has the old content blocks (they belong to %s)',
+            ClassInfo::shortName($areaClass),
+        );
+    }
+
+    /**
+     * @param array<int, array{class-string, non-empty-string}> $skipped page ID → [class, reason]
+     * @return list<SkippedPage> in page order
+     */
+    private function skippedPages(array $skipped): array
+    {
+        if ($skipped === []) {
+            return [];
+        }
+
+        \ksort($skipped);
+        [$condition, $params] = $this->pageIdCondition('"ID"', \array_keys($skipped));
+        /** @var array<int, string|null> $titles */
+        $titles = DB::prepared_query("SELECT \"ID\", \"Title\" FROM \"SiteTree\" WHERE {$condition}", $params)->map();
+
+        $pages = [];
+        foreach ($skipped as $pageId => [$pageClassName, $reason]) {
+            $pages[] = new SkippedPage($pageId, (string) ($titles[$pageId] ?? ''), $pageClassName, $reason);
         }
 
         return $pages;

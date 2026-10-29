@@ -5,9 +5,13 @@ declare(strict_types=1);
 namespace WeDevelop\Grid\Tests\Integration\Migration\Service;
 
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Page;
+use SilverStripe\CMS\Model\RedirectorPage;
+use SilverStripe\CMS\Model\VirtualPage;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\DB;
+use WeDevelop\Grid\Migration\DTO\SkippedPage;
 use WeDevelop\Grid\Migration\Service\LegacyPageDiscovery;
 use WeDevelop\Grid\Tests\Integration\Migration\Support\MigrationTestCase;
 
@@ -176,6 +180,167 @@ final class LegacyPageDiscoveryTest extends MigrationTestCase
         } finally {
             $this->seeder->removeExtensionColumns('SiteTree');
         }
+    }
+
+    public function testAPageConvertedToATypeOutsideTheAncestryOfItsAreaTableIsSkipped(): void
+    {
+        $table = DataObject::getSchema()->tableName(TestPage::class);
+        $this->seeder->addElementalAreaColumn($table);
+
+        try {
+            $pageId = (int) TestPage::create(['Title' => 'Our team'])->write();
+            $this->seeder->seedPlainElementalPageOnTable($table, $pageId, 500);
+            $this->seeder->changePageClass($pageId, Page::class);
+
+            self::assertSame([], $this->discovery->getEligiblePages('draft'));
+            self::assertEquals(
+                [new SkippedPage(
+                    $pageId,
+                    'Our team',
+                    Page::class,
+                    'its current type no longer has the old content blocks (they belong to TestPage)',
+                )],
+                $this->discovery->getSkippedPages(),
+            );
+        } finally {
+            $this->seeder->removeElementalAreaColumn($table);
+        }
+    }
+
+    /**
+     * @return iterable<string, array{class-string}>
+     */
+    public static function neverUpgradedPageClasses(): iterable
+    {
+        yield 'redirector page' => [RedirectorPage::class];
+        yield 'virtual page' => [VirtualPage::class];
+    }
+
+    /**
+     * @param class-string $pageClass
+     */
+    #[DataProvider('neverUpgradedPageClasses')]
+    public function testAPageConvertedToANeverUpgradedTypeIsSkippedThoughItsAncestryHoldsTheArea(string $pageClass): void
+    {
+        $pageId = $this->pageId();
+        $this->seeder->seedPage($pageId, 100);
+        $this->seeder->changePageClass($pageId, $pageClass);
+
+        self::assertSame([], $this->discovery->getEligiblePages('draft'));
+        self::assertEquals(
+            [new SkippedPage($pageId, 'Integration Test Page', $pageClass, 'this page type is never upgraded')],
+            $this->discovery->getSkippedPages(),
+        );
+    }
+
+    public function testANeverUpgradedTypeIsTheReasonEvenWhenTheAncestryMissesTheAreaTableToo(): void
+    {
+        $table = DataObject::getSchema()->tableName(TestPage::class);
+        $this->seeder->addElementalAreaColumn($table);
+
+        try {
+            $pageId = (int) TestPage::create(['Title' => 'Summer offers'])->write();
+            $this->seeder->seedPlainElementalPageOnTable($table, $pageId, 500);
+            $this->seeder->changePageClass($pageId, RedirectorPage::class);
+
+            self::assertSame(
+                ['this page type is never upgraded'],
+                \array_map(static fn (SkippedPage $page): string => $page->reason, $this->discovery->getSkippedPages()),
+            );
+        } finally {
+            $this->seeder->removeElementalAreaColumn($table);
+        }
+    }
+
+    public function testASiteCanAddAPageTypeOfItsOwnToTheTypesNeverUpgraded(): void
+    {
+        LegacyPageDiscovery::config()->merge('excluded_page_classes', [TestPage::class]);
+        $kept = $this->pageId();
+        $excluded = (int) TestPage::create(['Title' => 'Search results'])->write();
+        $this->seeder->seedPage($kept, 100);
+        $this->seeder->seedPage($excluded, 101);
+
+        self::assertSame([$kept], \array_column($this->discovery->getEligiblePages('draft'), 'pageId'));
+        self::assertEquals(
+            [new SkippedPage($excluded, 'Search results', TestPage::class, 'this page type is never upgraded')],
+            $this->discovery->getSkippedPages(),
+        );
+    }
+
+    public function testAPageConvertedBetweenTwoTypesSharingTheAreaTableStaysEligible(): void
+    {
+        $pageId = $this->pageId();
+        $this->seeder->seedPage($pageId, 100);
+        $this->seeder->changePageClass($pageId, TestPage::class);
+
+        self::assertSame(
+            [['pageId' => $pageId, 'areaId' => 100, 'liveAreaId' => 100, 'pageClassName' => TestPage::class]],
+            $this->discovery->getEligiblePages('draft'),
+        );
+        self::assertSame([], $this->discovery->getSkippedPages());
+    }
+
+    public function testAStaleRowOfAnOldTypeNeitherShadowsNorListsAPageTheAncestryStillQualifies(): void
+    {
+        $table = DataObject::getSchema()->tableName(TestPage::class);
+        $this->seeder->addElementalAreaColumn($table);
+
+        try {
+            $pageId = (int) TestPage::create(['Title' => 'Converted back'])->write();
+            $this->seeder->seedPlainElementalPageOnTable($table, $pageId, 500);
+            $this->seeder->seedPage($pageId, 100);
+            $this->seeder->changePageClass($pageId, Page::class);
+
+            self::assertSame(
+                [['pageId' => $pageId, 'areaId' => 100, 'liveAreaId' => 100, 'pageClassName' => Page::class]],
+                $this->discovery->getEligiblePages('draft'),
+            );
+            self::assertSame([], $this->discovery->getSkippedPages());
+        } finally {
+            $this->seeder->removeElementalAreaColumn($table);
+        }
+    }
+
+    public function testADeletedPageIsNeitherEligibleNorListedAsSkipped(): void
+    {
+        $pageId = $this->pageId();
+        $this->seeder->seedPage($pageId, 100);
+        DB::prepared_query('DELETE FROM "SiteTree" WHERE "ID" = ?', [$pageId]);
+
+        self::assertSame([], $this->discovery->getEligiblePages('draft'));
+        self::assertSame([], $this->discovery->getSkippedPages());
+    }
+
+    public function testSkippedPagesAreListedInPageOrderAndHonourThePageFilter(): void
+    {
+        $first = $this->pageId();
+        $second = $this->pageId('test_page_2');
+        foreach ([$second => 101, $first => 100] as $pageId => $areaId) {
+            $this->seeder->seedPage($pageId, $areaId);
+            $this->seeder->changePageClass($pageId, RedirectorPage::class);
+        }
+
+        $skippedIds = static fn (array $pages): array => \array_map(static fn (SkippedPage $page): int => $page->pageId, $pages);
+
+        self::assertSame([$first, $second], $skippedIds($this->discovery->getSkippedPages()));
+        self::assertSame([$second], $skippedIds($this->discovery->getSkippedPages([$second])));
+    }
+
+    public function testAPerLocaleAreaTableSkipsAConvertedPageInEveryLocale(): void
+    {
+        $pageId = $this->pageId();
+        $this->seeder->seedPage($pageId, 900);
+        $this->seeder->addLocalisedAreaTables('Page');
+        $this->seeder->seedLocalisedArea('Page', $pageId, 'en_US', 100);
+        $this->seeder->seedLocalisedArea('Page', $pageId, 'nl_NL', 200);
+        $this->seeder->changePageClass($pageId, RedirectorPage::class);
+
+        self::assertSame([], $this->discovery->getEligiblePagesInLocale(['en_US'], true, true));
+        self::assertSame([], $this->discovery->getEligiblePagesInLocale(['nl_NL'], false, false));
+        self::assertEquals(
+            [new SkippedPage($pageId, 'Integration Test Page', RedirectorPage::class, 'this page type is never upgraded')],
+            $this->discovery->getSkippedPagesInLocale(['en_US'], true, true),
+        );
     }
 
     public function testGetEligiblePagesThrowsOnInvalidStage(): void
