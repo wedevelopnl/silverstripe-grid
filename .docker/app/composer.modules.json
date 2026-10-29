@@ -24,8 +24,9 @@
             "src/"
         ]
     },
-    "_comment_require_dev": "QA toolchain is pinned to exact versions so CI's lock-less `composer install` cannot silently float into a rule/behavior change that breaks the build. Runtime deps (recipe-cms, fluent) stay on ranges so the module keeps testing against the latest SS6.x. Bump these manually when adopting a new tool release. Pins must resolve on php 8.3 (the module's floor): phpunit/phpcov is held on the 11.x line that matches phpunit 12 (12.x requires php >= 8.4).",
+    "_comment_require_dev": "QA toolchain is pinned to exact versions so CI's lock-less `composer install` cannot silently float into a rule/behavior change that breaks the build. Runtime deps (recipe-cms, fluent) stay on ranges so the module keeps testing against the latest SS6.x. Bump these manually when adopting a new tool release. Pins must resolve on php 8.3 (the module's floor): phpunit/phpcov is held on the 11.x line that matches phpunit 12 (12.x requires php >= 8.4), and brianium/paratest on 7.20 (later releases require php >= 8.4).",
     "require-dev": {
+        "brianium/paratest": "7.20.0",
         "cambis/silverstan": "2.2.0",
         "infection/infection": "0.35.8",
         "phpstan/extension-installer": "1.4.3",
