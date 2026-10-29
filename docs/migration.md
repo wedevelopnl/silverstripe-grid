@@ -199,6 +199,17 @@ Shared content areas:
 
 A shared area's pages may be migrated over several runs (`--page-ids`, or a re-run after a failure): a later run's copy is still handed the first copy an earlier run wrote (see [hook 10](#10-re-attaching-items-a-block-owns)).
 
+When the run left pages without a grid because their current type no longer carries their content blocks (see [What Gets Migrated](#what-gets-migrated)), it lists every one of them, with its page ID, title, current type and reason, followed by a count. A dry run closes with `Dry run: …` instead of `Done: …`. Skipping a page does not fail the run, and nothing is listed when no page was skipped:
+
+```
+Skipped pages:
+  - Page #42 "Summer offers" (RedirectorPage): this page type is never upgraded
+  - Page #57 "Our team" (TeamPage): its current type no longer has the old content blocks (they belong to HolidayPage)
+Done: 2 page(s) skipped.
+```
+
+`migrate-grid-with-fluent` lists a skipped page once per run, not once per locale.
+
 If a run finishes with failures, the summary line is followed by `Check logs for details.`, the task exits with a non-zero status and the failing page IDs are logged as errors. Pages that failed remain un-migrated and can be re-run after the cause is fixed.
 
 ## Multi-locale (Fluent) sites
@@ -263,6 +274,18 @@ A site can mix both: a page type whose area is per locale next to page types tha
 
 ## What Gets Migrated
 
+- **Pages whose current type still carries their content blocks.** Converting a page to another type in the CMS changes only its type: the old type's data stays in the database, including its link to the old content blocks. A page is migrated only when its current (draft) type is the type whose table holds that link, or a subclass of it — so a page converted between two types that share their blocks through a common parent type (both extending `Page`, with the blocks on `Page`) is migrated as usual, under its current type. A page converted to a type outside that line is skipped on both stages and listed (see [Summary line](#summary-line)). Redirector pages and virtual pages are never migrated, nor any type built on them; a site can add its own page types to that list:
+
+  ```yaml
+  ---
+  Name: app-grid-migration
+  ---
+  WeDevelop\Grid\Migration\Service\LegacyPageDiscovery:
+    excluded_page_classes:
+      - App\Pages\SearchResultsPage
+  ```
+
+  Pages deleted from the site tree, pages with `UseElementalGrid = 0` and pages without a content area are left out without being listed, as before. A page whose type no longer exists in the code base is still migrated.
 - **Hierarchy.** The flat legacy list becomes Section → Row → Column → Content.
 - **Grid settings.** The 15 legacy per-viewport fields (`SizeXS`…`SizeXL`, `OffsetXS`…`OffsetXL`, `VisibilityXS`…`VisibilityXL`) are converted into the new `GridSettings` value object (`default` + per-viewport `overrides`). An override is only emitted when it differs from the default.
 - **Grid settings clamping.** Invalid legacy values are clamped to keep the write transaction alive:
@@ -758,6 +781,17 @@ Carry the block link FK fields across during the grid pass with the `updateEleme
 **"Legacy element table "Element_Versions" not found; new grid elements cannot be numbered above the legacy ones."** — A run that writes raises the new element numbering above every legacy ID first (see [Before You Begin](#before-you-begin)) and reads all three legacy element tables for it. It stops before the first page and changes nothing. Restore the table from the SS5 database, or rename it back from `_obsolete_*`.
 
 **"Page table "Page": dev/build set aside its per-locale ElementalAreaID. Rename "_obsolete_Page_Localised" back to "Page_Localised" …"** — `migrate-grid-with-fluent` found the per-locale area of that page type, for draft or live, only in a table `dev/build` set aside. It refuses before the confirmation prompts and changes nothing, under `--dry-run` too. The message names every table still set aside, so after renaming only `_obsolete_Page_Localised` back it still refuses, naming `_obsolete_Page_Localised_Live`. Rename the tables back as the message says (see [Additional prerequisites](#additional-prerequisites)) and run the task again.
+
+**A page is listed under "Skipped pages" but should have been migrated.** — Its old content is left untouched. If its type is on the list of types never migrated, take the type off the list and migrate that page again with `--page-ids`. YAML merges lists, so it cannot remove the default `RedirectorPage` or `VirtualPage`; set the whole list in `app/_config.php` instead:
+
+```php
+use SilverStripe\CMS\Model\VirtualPage;
+use WeDevelop\Grid\Migration\Service\LegacyPageDiscovery;
+
+LegacyPageDiscovery::config()->set('excluded_page_classes', [VirtualPage::class]);
+```
+
+A page skipped because its current type no longer has the old content blocks is migrated once its type is changed back to the type the reason names, or to one built on it.
 
 **"Page X already migrated for zone Y, skipping."** — The idempotency check found at least one `Section` for that page and zone on draft. If you need to redo the page, delete its new Section tree first.
 
