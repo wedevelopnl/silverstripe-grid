@@ -108,6 +108,18 @@ final class SharedBlockTest extends SapphireTest
         self::assertTrue($block->canDelete());
     }
 
+    public function testADraftOnlyPlacementIsReferencedWhileLiveIsRead(): void
+    {
+        $page = $this->objFromFixture(Page::class, 'test_page');
+        $block = GridTreeFactory::sharedBlock();
+        GridTreeFactory::section($block, zone: '');
+        GridTreeFactory::reference($page, $block);
+
+        Versioned::set_stage(Versioned::LIVE);
+
+        self::assertTrue($block->isReferenced());
+    }
+
     public function testDeletingBlockArchivesItsPlacements(): void
     {
         $this->logInWithPermission('ADMIN');

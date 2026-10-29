@@ -323,12 +323,8 @@ class SharedBlock extends DataObject
         }
 
         $blockId = (int) $this->ID;
-        $placedInLocale = static fn (): bool => SharedBlockReference::get()->filter(['BlockID' => $blockId])->exists()
-            || Versioned::withVersionedMode(static function () use ($blockId): bool {
-                Versioned::set_stage(Versioned::LIVE);
-
-                return SharedBlockReference::get()->filter(['BlockID' => $blockId])->exists();
-            });
+        $placedInLocale = static fn (): bool => SharedBlockReference::placing($blockId, Versioned::DRAFT)->exists()
+            || SharedBlockReference::placing($blockId, Versioned::LIVE)->exists();
 
         return in_array(true, LocaleScope::singleton()->each($placedInLocale), true);
     }
@@ -433,19 +429,15 @@ class SharedBlock extends DataObject
 
     private static function archivePlacements(int $blockId): void
     {
-        foreach (SharedBlockReference::get()->filter(['BlockID' => $blockId]) as $reference) {
+        foreach (SharedBlockReference::placing($blockId, Versioned::DRAFT) as $reference) {
             $reference->doArchive();
         }
 
         // A placement survives on live alone when its draft row was deleted
         // without unpublishing first, and doArchive() above never sees those.
-        Versioned::withVersionedMode(static function () use ($blockId): void {
-            Versioned::set_stage(Versioned::LIVE);
-
-            foreach (SharedBlockReference::get()->filter(['BlockID' => $blockId]) as $reference) {
-                $reference->deleteFromStage(Versioned::LIVE);
-            }
-        });
+        foreach (SharedBlockReference::placing($blockId, Versioned::LIVE) as $reference) {
+            $reference->deleteFromStage(Versioned::LIVE);
+        }
     }
 
     /**

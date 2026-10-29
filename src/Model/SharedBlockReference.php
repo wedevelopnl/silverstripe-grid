@@ -7,6 +7,7 @@ namespace WeDevelop\Grid\Model;
 use Override;
 use Psr\Log\LoggerInterface;
 use SilverStripe\Core\Injector\Injector;
+use SilverStripe\ORM\DataList;
 use SilverStripe\Versioned\Versioned;
 
 /**
@@ -36,6 +37,21 @@ class SharedBlockReference extends GridElement
     private static array $has_one = [
         'Block' => SharedBlock::class,
     ];
+
+    /**
+     * The placements of a block on one stage, whichever stage is being read.
+     * The current locale still applies: a locale pass runs this per locale.
+     *
+     * @param Versioned::DRAFT|Versioned::LIVE $stage
+     * @return DataList<self>
+     */
+    public static function placing(int $blockId, string $stage): DataList
+    {
+        /** @var DataList<self> $placements */
+        $placements = Versioned::get_by_stage(self::class, $stage, ['BlockID' => $blockId]);
+
+        return $placements;
+    }
 
     /**
      * A placement is judged by the class its block is rooted at, never by its
