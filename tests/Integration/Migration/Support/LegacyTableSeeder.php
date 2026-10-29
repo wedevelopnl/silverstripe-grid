@@ -237,6 +237,17 @@ final class LegacyTableSeeder
     }
 
     /**
+     * Convert a page to another type on draft, the way the CMS does: only
+     * `SiteTree.ClassName` changes, and the rows of the old type's tables stay.
+     *
+     * @param class-string $className
+     */
+    public function changePageClass(int $pageId, string $className): void
+    {
+        DB::prepared_query('UPDATE "SiteTree" SET "ClassName" = ? WHERE "ID" = ?', [$className, $pageId]);
+    }
+
+    /**
      * Seed a plain elemental page (ElementalAreaID only, no UseElementalGrid).
      */
     public function seedPlainElementalPage(int $pageId, int $areaId): void
