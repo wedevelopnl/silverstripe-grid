@@ -28,6 +28,7 @@ src/Validation/       # Write-time + reorder-time validation (HierarchyValidatio
 src/Exception/        # Domain exceptions (GridDomainException, InvalidGridValueException)
 src/ORM/FieldType/    # Custom DB field types (DBGridSettings composite field)
 src/Repository/       # Repository interfaces + ORM implementations (GridElementRepositoryInterface, OrmGridElementRepository)
+tests/Support/        # PHPUnit support classes (ReseedParatestWorkers — see PHP Testing)
 tests/Unit/           # PHPUnit unit tests (no DB/framework)
 tests/Integration/    # PHPUnit integration tests (full SS env)
 tests/Functional/     # PHPUnit functional tests (HTTP/controller)
@@ -54,7 +55,9 @@ client/src/styles/    # Plain modern CSS (native nesting; tokens + fonts + a11y 
 client/fonts/         # Self-hosted Poppins woff2 subsets + OFL licence; copied to client/dist/fonts/ at build
 client/dist/          # Vite build output (exposed, created by build)
 client/js/            # Hand-written, unbundled admin-chrome scripts (shared-block-add.js) — required by the PHP field that renders their markup, never imported by the editor bundle
+lang/                 # PHP translations (en.yml, nl.yml); the editor's JS strings live in client/lang/
 scripts/              # Build scripts (i18n collection, parity checks)
+.claude/              # Agent tooling: project skills (dnd-guide, e2e-test-reference, grid-adapter-scaffold, react-best-practices), hooks (see Gotchas → Tooling), the silvana agent
 phpstan/stubs/        # PHPStan stubs (e.g. AdminController.stub)
 .github/workflows/    # CI: ci.yml (js-qa, static-analysis, php-qa matrix, e2e matrix) + relock.yml (weekly harness lock refresh)
 .docker/              # Docker dev env: Caddy + PHP + MySQL 8

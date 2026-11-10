@@ -40,8 +40,6 @@ Elements use a polymorphic `has_one` (`ParentID + ParentClass`) to link to any D
 - Column → parent is `Row`
 - Content element → parent is `Column`
 
-Page IDs and element IDs share no namespace separation, so lookup maps must key by composite `"ParentClass:ParentID"` strings.
-
 ## Zones
 
 `Zone` (e.g., `"main"`, `"sidebar"`) is declared on `GridElement` and is meaningful ONLY when the element's parent is a `SiteTree` — `GridElementService` forces `''` everywhere else. **Invariant: Zone is non-empty exactly when the parent is a `SiteTree`**, enforced on every write and every stage by `GridElement::validate()` (via `isZoneScoped()`) — NOT by `HierarchyValidationExtension`, which a project may detach. Code writing a page root directly must set a `Zone`; `api/place` refuses a page-root placement without one before localising the block. Older rows breaking it block publish/duplicate/copy-to-locale of their page until `sake tasks:repair-grid-zone` (`Task\OneTime\Beta5\RepairGridZoneTask`) runs; a page's zones are read through `GridZoneResolver`. It lives on the base so one indexed query returns a zone's whole root sequence (Sections and placements together) — never move it back onto a subclass. Sort values are independent per zone per parent. All queries (tree loading, sort assignment, reorder) filter by zone at the root level.

@@ -331,8 +331,9 @@ tasks:
   seed:
     internal: true
     # Hits the same dev-only endpoint the Playwright suite uses. Loading is
-    # idempotent: the loader archives previously-seeded e2e-* pages first, so a
-    # re-run (or switching FIXTURE) never stacks residue. Fixture names are
+    # idempotent because the loader first removes EVERY record of
+    # FixtureLoader.purge_classes (_config/dev.yml), on both stages — not just
+    # earlier fixture data, so hand-made pages and blocks go too. Fixture names are
     # registered in _config/dev.yml under FixtureLoader.fixtures. -k because the
     # dev testbed serves a self-signed certificate. The key is anchored because
     # WEB_PORT is a suffix of MODULES_WEB_PORT.
