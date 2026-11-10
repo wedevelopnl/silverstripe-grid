@@ -70,7 +70,7 @@ docs/images/          # Generated doc screenshots — regenerate, never hand-edi
 - Frontend: React 18, TypeScript 6, Vite 8, plain modern CSS (no Sass)
 - Key frontend libs: dnd-kit (drag & drop), TanStack Query (data fetching), Valibot (validation)
 - Testing: Vitest + React Testing Library (jsdom), PHPUnit 12, Playwright (E2E)
-- Node: >=26 (pinned to 26.12.1 in `.nvmrc`)
+- Node: >=26 (pinned to 26.13.0 in `.nvmrc`)
 - Docker dev env: Caddy + PHP + MySQL 8 (see `.docker/`)
 
 ## Key Files
