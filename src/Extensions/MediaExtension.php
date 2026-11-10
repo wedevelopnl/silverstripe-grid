@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace WeDevelop\Grid\Extensions;
 
-use Embed\Embed;
 use LogicException;
 use Psr\Log\LoggerInterface;
 use SilverStripe\AssetAdmin\Forms\UploadField;
@@ -22,6 +21,7 @@ use WeDevelop\Grid\Model\GridElement;
 use WeDevelop\Grid\Value\AspectRatio;
 use WeDevelop\MediaField\Form\MediaField;
 use WeDevelop\MediaField\Form\MediaType;
+use WeDevelop\MediaField\Service\VideoEmbedResolver;
 use Throwable;
 
 /**
@@ -264,9 +264,8 @@ class MediaExtension extends Extension
     /** Resolve oEmbed metadata for the current VideoURL via the MediaField package. */
     protected function resolveVideoEmbed(DataObject $owner): void
     {
-        MediaField::saveEmbed(
+        VideoEmbedResolver::singleton()->resolve(
             $owner,
-            new Embed(),
             videoFullURLField: 'VideoURL',
             videoEmbeddedURLField: 'VideoEmbedURL',
             videoProviderField: 'VideoProvider',

@@ -33,6 +33,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Elements inside a shared block are now viewable by anyone who may view a page that places the block.** Previously `canView()` on such an element followed the block record, which requires CMS access, so an anonymous visitor could not view content they were already seeing on the page. The block record itself is unchanged. Projects relying on `canView()` to hide placed block content from visitors should veto it with an `updateCanView` extension instead.
 
+- **`wedevelopnl/silverstripe-media-field` is required at its stable release** — `^6.0.0-rc3` → `^6.0`, now that 6.0.0 is tagged. 6.0.0 removed `MediaField::saveEmbed()`, so the grid resolves a video's details through the module's `VideoEmbedResolver`, and an RC no longer satisfies the constraint. A video URL the resolver refuses (internal network, missing scheme) or cannot reach still saves without embed details, as before.
+
 ### Removed
 
 - **The Bulma preset is gone; Bootstrap and Tailwind are the bundled presets** — `BulmaAdapter` only served legacy sites, which need a new theme for their SilverStripe 6 upgrade anyway. `SS_GRID_ADAPTER=bulma` now throws at container boot like any other unknown value. A site that still needs Bulma copies the 6.0.0-beta.5 `BulmaAdapter` into its own code and sets `SS_GRID_ADAPTER` to that class's FQCN. The generic adapter options it relied on — `hide_class_overrides`, an empty `responsive_restore_format` for viewport-scoped hides, `base_column_class`, multi-class base formats — stay available to custom adapters.

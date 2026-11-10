@@ -6703,7 +6703,7 @@
             "dist": {
                 "type": "path",
                 "url": "/module",
-                "reference": "83e43df51a9578b55d2aeaa2778964a380b6213b"
+                "reference": "9aff12b1b793b4daee49f7a51ddfe4fa1444c9bd"
             },
             "require": {
                 "php": "^8.3",
@@ -6713,7 +6713,7 @@
                 "silverstripe/vendor-plugin": "^3.0",
                 "silverstripe/versioned": "^3.0",
                 "unclecheese/display-logic": "^4.0",
-                "wedevelopnl/silverstripe-media-field": "^6.0.0-rc3"
+                "wedevelopnl/silverstripe-media-field": "^6.0"
             },
             "conflict": {
                 "dnadesign/silverstripe-elemental": "*"
@@ -6782,20 +6782,20 @@
         },
         {
             "name": "wedevelopnl/silverstripe-media-field",
-            "version": "6.0.0-RC3",
+            "version": "6.0.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/wedevelopnl/silverstripe-media-field.git",
-                "reference": "6aa80aa37a916bc5e9533d283dc76576c316da18"
+                "reference": "9d68940dca6875b2f9db366f8d519a44db75d88d"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/wedevelopnl/silverstripe-media-field/zipball/6aa80aa37a916bc5e9533d283dc76576c316da18",
-                "reference": "6aa80aa37a916bc5e9533d283dc76576c316da18",
+                "url": "https://api.github.com/repos/wedevelopnl/silverstripe-media-field/zipball/9d68940dca6875b2f9db366f8d519a44db75d88d",
+                "reference": "9d68940dca6875b2f9db366f8d519a44db75d88d",
                 "shasum": ""
             },
             "require": {
-                "embed/embed": "^4.0",
+                "embed/embed": "^4.5.4",
                 "php": "^8.3",
                 "silverstripe/asset-admin": "^3.0",
                 "silverstripe/cms": "^6",
@@ -6831,10 +6831,10 @@
             ],
             "support": {
                 "issues": "https://github.com/wedevelopnl/silverstripe-media-field/issues",
-                "source": "https://github.com/wedevelopnl/silverstripe-media-field/tree/6.0.0-RC3"
+                "source": "https://github.com/wedevelopnl/silverstripe-media-field/tree/6.0.0"
             },
-            "time": "2026-04-28T14:57:14+00:00",
-            "published-time": "2026-04-28T14:58:03+00:00"
+            "time": "2026-11-10T10:48:06+00:00",
+            "published-time": "2026-11-10T10:48:32+00:00"
         }
     ],
     "packages-dev": [
