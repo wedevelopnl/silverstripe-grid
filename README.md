@@ -46,7 +46,7 @@ The [grid editor guide](docs/usage/grid-editor.md) walks through the rest of the
 
 - PHP ^8.3
 - `silverstripe/framework` ^6.0, `silverstripe/cms` ^6.0, `silverstripe/admin` ^3.0, `silverstripe/versioned` ^3.0, `silverstripe/vendor-plugin` ^3.0
-- `unclecheese/display-logic` ^4.0, `wedevelopnl/silverstripe-media-field` ^6.0.0-rc3
+- `unclecheese/display-logic` ^4.0, `wedevelopnl/silverstripe-media-field` ^6.0
 - Node >= 26 — only if you build the frontend bundle yourself; the package ships a compiled one
 
 Optional:
