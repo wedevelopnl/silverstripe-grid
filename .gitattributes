@@ -39,6 +39,8 @@
 /apm.yml                 export-ignore
 /CLAUDE.md               export-ignore
 /GEMINI.md               export-ignore
+/src/**/AGENTS.md        export-ignore
+/src/**/CLAUDE.md        export-ignore
 /Taskfile.yml            export-ignore
 /biome.json              export-ignore
 /package.json            export-ignore

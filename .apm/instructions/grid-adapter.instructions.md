@@ -39,5 +39,3 @@ The adapter is entirely configuration-driven. `GridAdapter` is a single **abstra
 - `ContentLayoutAdapterInterface` is implemented by the same `GridAdapter` instance — both interfaces resolve to one singleton via `GridAdapterFactory` in `_config/content-layout.yml`.
 - Override strategy (`isolated` vs `cascade`) lives on `GridSettingsResolver`, **not** on the adapter. Cascade carries an override DOWN to smaller viewports (largest→smallest walk), not up. The editor previews stored settings only (isolated), whatever the strategy.
 - `ColumnClassResolver` compares a column's offset with the last VISIBLE viewport's, never a hidden one's — a hidden viewport emits no offset class.
-
-For the full property reference, sprintf arg tables, implementation walkthrough, and content layout details, see `docs/architecture/grid-adapter.md`.

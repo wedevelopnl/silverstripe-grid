@@ -12,4 +12,3 @@ applyTo: "**/*"
 - To regenerate (e.g., after renaming/copying a worktree): `rm .docker/.env && task up`
 - If ports conflict with another worktree, stop the conflicting services first (`task down` in that worktree)
 - Default admin credentials: `admin`/`admin`
-- Use `task up`/`task down` to manage services (see Commands)
