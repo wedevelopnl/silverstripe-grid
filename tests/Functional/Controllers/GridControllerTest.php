@@ -565,81 +565,24 @@ final class GridControllerTest extends FunctionalTest
         self::assertSame(400, $response->getStatusCode());
     }
 
-    public function testPublishReturns204(): void
+    public function testSetPublishedIsNotFoundAndLeavesTheElementLive(): void
     {
         $tree = $this->buildTree();
-        $section = $tree['section'];
-        $sectionId = (int) $section->ID;
+        $this->page()->publishRecursive();
+        $contentId = (int) $tree['content']->ID;
 
         $response = $this->jsonPatch(self::BASE_URL . '/setPublished', [
-            'element' => $this->ref($section),
-            'published' => true,
+            'element' => $this->ref($tree['content']),
+            'published' => false,
         ]);
 
-        self::assertSame(204, $response->getStatusCode());
-
-        // Verify element is now on LIVE
-        $live = Versioned::withVersionedMode(static function () use ($sectionId): ?Section {
+        self::assertSame(404, $response->getStatusCode());
+        $live = Versioned::withVersionedMode(static function () use ($contentId): ?ContentElement {
             Versioned::set_stage(Versioned::LIVE);
 
-            return Section::get()->byID($sectionId);
+            return ContentElement::get()->byID($contentId);
         });
         self::assertNotNull($live);
-    }
-
-    public function testPublishReturns400ForNonExistentElement(): void
-    {
-        $response = $this->jsonPatch(self::BASE_URL . '/setPublished', [
-            'element' => $this->syntheticRef('section', 999999),
-            'published' => true,
-        ]);
-
-        self::assertSame(400, $response->getStatusCode());
-    }
-
-    public function testSetPublishedReturns400ForNonBoolPublished(): void
-    {
-        $tree = $this->buildTree();
-
-        $response = $this->jsonPatch(self::BASE_URL . '/setPublished', [
-            'element' => $this->ref($tree['section']),
-            'published' => 'yes',
-        ]);
-
-        self::assertSame(400, $response->getStatusCode());
-    }
-
-    public function testUnpublishReturns204(): void
-    {
-        $tree = $this->buildTree();
-        $section = $tree['section'];
-        $section->publishRecursive();
-        $sectionId = (int) $section->ID;
-
-        $response = $this->jsonPatch(self::BASE_URL . '/setPublished', [
-            'element' => $this->ref($section),
-            'published' => false,
-        ]);
-
-        self::assertSame(204, $response->getStatusCode());
-
-        // Verify element is no longer on LIVE
-        $live = Versioned::withVersionedMode(static function () use ($sectionId): ?Section {
-            Versioned::set_stage(Versioned::LIVE);
-
-            return Section::get()->byID($sectionId);
-        });
-        self::assertNull($live);
-    }
-
-    public function testUnpublishReturns400ForNonExistentElement(): void
-    {
-        $response = $this->jsonPatch(self::BASE_URL . '/setPublished', [
-            'element' => $this->syntheticRef('section', 999999),
-            'published' => false,
-        ]);
-
-        self::assertSame(400, $response->getStatusCode());
     }
 
     public function testDeleteReturns204(): void
@@ -1257,34 +1200,6 @@ final class GridControllerTest extends FunctionalTest
         self::assertSame(403, $response->getStatusCode());
     }
 
-    public function testPublishReturns403ForNonEditableElement(): void
-    {
-        $restricted = $this->buildRestrictedTree();
-
-        $response = $this->jsonPatch(self::BASE_URL . '/setPublished', [
-            'element' => $this->ref($restricted['section']),
-            'published' => true,
-        ]);
-
-        self::assertSame(403, $response->getStatusCode());
-    }
-
-    public function testUnpublishReturns403ForNonEditableElement(): void
-    {
-        $restricted = $this->buildRestrictedTree();
-
-        // Publish the restricted element first so unpublish has something to act
-        // on; the canUnpublish() guard must still reject the request with 403.
-        $restricted['section']->publishRecursive();
-
-        $response = $this->jsonPatch(self::BASE_URL . '/setPublished', [
-            'element' => $this->ref($restricted['section']),
-            'published' => false,
-        ]);
-
-        self::assertSame(403, $response->getStatusCode());
-    }
-
     public function testUpdateGridSettingsReturns403ForNonEditableElement(): void
     {
         $restricted = $this->buildRestrictedTree();
@@ -1844,14 +1759,6 @@ final class GridControllerTest extends FunctionalTest
 
         // touchOwningPage receives null page and returns early — no crash
         self::assertSame(204, $response->getStatusCode());
-    }
-
-    public function testPublishReturns400ForMissingElement(): void
-    {
-        // Body without 'published' — non-bool published → jsonError(400)
-        $response = $this->jsonPatch(self::BASE_URL . '/setPublished', []);
-
-        self::assertSame(400, $response->getStatusCode());
     }
 
     public function testReorderSectionUsesPageLookup(): void

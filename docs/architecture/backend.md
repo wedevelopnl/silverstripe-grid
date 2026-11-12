@@ -207,7 +207,6 @@ any other element.
 | GET | `api/readTree/{PageID}/{Zone}` | Load element tree for a zone on a page (draft) | 200 + `{ rootParent: NodeRef, nodes: GridNode[] }` |
 | GET | `api/readTree/{PageID}/{Zone}/version/{Version}` | Load element tree at a specific historical version | 200 + `{ rootParent: NodeRef, nodes: GridNode[] }` |
 | POST | `api/create` | Create an element under a parent — a container (Section / Row / Column, via `containerType`) or a content element inside a `Column` (via `className`); the controller dispatches on whichever discriminator is present | 204 |
-| PATCH | `api/setPublished` | Publish (`published: true`, recursive) or unpublish (`published: false`) an element | 204 |
 | DELETE | `api/delete` | Archive an element (`type` and `id` on the query string) | 204 |
 | POST | `api/duplicate` | Duplicate an element in place (same parent) | 204 |
 | POST | `api/duplicateTo` | Duplicate an element into a specific target parent (and target page / zone) | 204 |
@@ -248,7 +247,7 @@ The controller delegates body parsing to `RequestBodyParser`, which returns type
 - `parseUpdateGridSettingsBody()` — validates `element` (`NodeRef`) plus viewport-scoped width/offset/visibility (viewport must match an adapter viewport)
 - `parseDuplicateToBody()` — validates source `element` (`NodeRef`), `targetPageId`, `targetZone`, and `targetParent` (`NodeRef`)
 - `parseResetGridSettingsOverridesBody()` — validates `pageId`, `zone`, and optional `viewport` filter (rejects the adapter default viewport — it has no overrides to reset)
-- `parseElementRef()` — validates a `NodeRef` `{type, id}` envelope under the `element` key (rejecting `NodeType::Page`); used by the single-target mutation endpoints (publish/unpublish, duplicate, and `api/detach` on `SharedBlockController`). Archive reads the same pair from the query string through `parseElementRefFromQuery()`
+- `parseElementRef()` — validates a `NodeRef` `{type, id}` envelope under the `element` key (rejecting `NodeType::Page`); used by the single-target mutation endpoints (duplicate, and `api/detach` on `SharedBlockController`). Archive reads the same pair from the query string through `parseElementRefFromQuery()`
 
 Invalid payloads produce HTTP 400. Validation failures from the service layer produce HTTP 422 with structured error JSON.
 
@@ -264,7 +263,7 @@ Invalid payloads produce HTTP 400. Validation failures from the service layer pr
 | `canEdit()` on element | Reorder, updateGridSettings |
 | `canEdit()` on source parent | Duplicate (in-place); cross-parent reorder |
 | `canDelete()` on element | Delete |
-| `canPublish()` / `canUnpublish()` | Publish / unpublish |
+| `canPublish()` / `canUnpublish()` on the shared block | `SharedBlockController`'s `setPublished` |
 | `canEdit()` on pages in result | `pages` (list is filtered to editable pages) |
 
 Permission resolution delegates to the owning page: `GridElement.canEdit()` walks the parent chain to the nearest `SiteTree` and calls `canEdit()` on it. Orphaned elements (no page in chain) fall back to `CMS_ACCESS` permission.
