@@ -75,7 +75,7 @@ export function subscribeActiveViewport(listener: Listener): () => void {
   }
 }
 
-/** Reset store to uninitialised — test-only utility. */
+/** @internal Test-only utility: reset the store to uninitialised. */
 export function resetActiveViewportStore(): void {
   current = null
   listeners.clear()

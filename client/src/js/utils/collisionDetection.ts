@@ -79,6 +79,8 @@ const closestCenterLive: CollisionDetection = (args) => {
  * read as page-local, which correctly refuses a shared element dropped at page
  * root. With no map supplied the check is inert — callers without tree context
  * keep the pre-shared-blocks behaviour.
+ *
+ * @internal Exported for tests; production code reaches it only from this file.
  */
 export function sameSharedContext(
   activeId: string,
@@ -96,6 +98,8 @@ export function sameSharedContext(
 /**
  * Returns only same-type sibling containers for the active draggable, on the
  * active item's side of any shared-block boundary.
+ *
+ * @internal Exported for tests; production code reaches it only from this file.
  */
 export function filterSiblings(
   activeId: string,
@@ -116,6 +120,8 @@ export function filterSiblings(
  * Returns only parent-type containers for the active draggable, on the
  * active item's side of any shared-block boundary.
  * For sections (parent = 'page'), returns containers with unparseable IDs.
+ *
+ * @internal Exported for tests; production code reaches it only from this file.
  */
 export function filterParentContainers(
   activeId: string,
@@ -168,6 +174,8 @@ export function filterParentContainers(
  * dnd-kit derives `over` from the first collision and nothing consumes the
  * rest, so the closest candidate is selected in a single pass instead of
  * sorting all crossing targets on every pointer move.
+ *
+ * @internal Exported for tests; production code reaches it only from this file.
  */
 export const centerCrossing: CollisionDetection = (args) => {
   const { active, collisionRect, droppableContainers, droppableRects, pointerCoordinates } = args

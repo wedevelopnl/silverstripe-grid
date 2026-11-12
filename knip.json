@@ -1,17 +1,22 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
   "entry": [
-    "client/src/js/types/*.ts",
-    "!client/src/js/types/*.test.ts",
-    "client/src/styles/admin-toolbar-menu.css",
+    "client/src/js/bundles/bundle.ts!",
+    "client/src/js/types/*.ts!",
+    "!client/src/js/types/*.test.ts!",
+    "client/src/styles/admin-toolbar-menu.css!",
+    "client/js/shared-block-add.js!",
     "stryker-ignorers.mjs",
     "tests/E2E/global.setup.ts",
     "tests/E2E/screenshots/docs.screenshots.ts"
   ],
   "project": [
-    "client/src/js/**/*.{ts,tsx}",
-    "client/src/styles/**/*.css",
-    "client/js/**/*.js",
+    "client/src/js/**/*.{ts,tsx}!",
+    "!client/src/js/**/*.test.{ts,tsx}!",
+    "!client/src/js/testing/**!",
+    "client/src/styles/**/*.css!",
+    "client/js/**/*.js!",
+    "!client/js/**/*.test.js!",
     "tests/E2E/**/*.ts",
     "scripts/**/*.mjs",
     "*.{ts,mts,mjs}"
