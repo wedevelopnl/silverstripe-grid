@@ -95,13 +95,18 @@ CI runs the same checks as separate jobs, plus a check that the committed build 
 
 `task class-leak` only reads PHP, so a class that SilverStripe reaches solely through YAML config or class-manifest discovery looks unused to it. Extensions, Injector factories, build tasks, reports and admin controllers are skipped by parent type. A class that is wired up only as a YAML Injector binding and has none of those parents must be added by FQCN to the `--skip-type` list in the `CLASS_LEAK` variable in `Taskfile.yml`. Only `src/` is scanned, so a class that only tests reference is still reported.
 
-`npm run knip` is the frontend counterpart: it follows the import graph from the entry points that `knip.json` and knip's plugins (Vite, Vitest, Playwright, Stryker, Biome) declare, and reports files, exports and npm dependencies nothing reaches. Anything loaded from outside that graph looks unused to it, so `knip.json` declares it:
+`npm run knip` is the frontend counterpart: it follows the import graph from the entry points that `knip.json` and knip's plugins (Vite, Vitest, Playwright, Stryker, Biome) declare, and reports files, exports and npm dependencies nothing reaches. It runs twice:
 
-- `entry` lists files that a tool loads by a path or pattern knip cannot read: `client/src/js/types/*.ts` (shipped as `.d.ts` files to consumers of the package, so their exports are public API), `admin-toolbar-menu.css` (a second Vite build input), `stryker-ignorers.mjs` (a Stryker plugin path), and the two Playwright files matched by a regex `testMatch`.
+1. **Default mode** covers everything, tests, E2E specs, scripts and tool configs included, so it also catches dead test helpers and unused devDependencies.
+2. **`--strict`** (production mode) follows only the shipped code: the patterns in `knip.json` that end in `!`. An export that only tests import fails here. If that export is a deliberate test seam (a helper used inside its own file and exported so a unit test can reach it), tag it `@internal` in its JSDoc. Otherwise it is dead code that its tests keep alive: delete it along with those tests.
+
+Anything loaded from outside the import graph looks unused, so `knip.json` declares it:
+
+- `entry` lists files that a tool loads by a path or pattern knip cannot read: `bundle.ts` (Vite's `build.lib.entry`, which production mode does not pick up from the plugin), `client/src/js/types/*.ts` (shipped as `.d.ts` files to consumers of the package, so their exports are public API), `admin-toolbar-menu.css` (a second Vite build input), `client/js/shared-block-add.js` (required by a PHP form field), `stryker-ignorers.mjs` (a Stryker plugin path), and the two Playwright files matched by a regex `testMatch`.
 - `project` limits the scan to source files, which keeps out the build output (`client/dist`), the compiled translations PHP loads (`client/lang`) and the Docker testbed assets.
 - `ignoreDependencies` lists `tailwindcss` and `@tailwindcss/cli`, which are run by hand to regenerate the testbed stylesheet (`.docker/assets/css/README.md`).
 
-Code that only tests reach still counts as used.
+The default run passes `--no-config-hints`: in that mode the Vite plugin already supplies `bundle.ts`, so knip calls the explicit entry redundant, even though production mode needs it. The strict run still reports configuration hints.
 
 ## Coding standards
 

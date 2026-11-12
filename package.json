@@ -20,7 +20,7 @@
     "i18n:collect": "node scripts/collect-js-i18n.mjs",
     "i18n:check": "node scripts/collect-js-i18n.mjs --dry-run && node scripts/check-i18n-parity.mjs",
     "check:icons": "node scripts/check-icon-classes.mjs",
-    "knip": "knip",
+    "knip": "knip --no-config-hints && knip --strict",
     "qa": "npm run lint && npm run format:check && npm run typecheck && npm run knip && npm run test && npm run i18n:check && npm run check:icons && vite build",
     "mutate": "stryker run",
     "test:e2e": "playwright test",

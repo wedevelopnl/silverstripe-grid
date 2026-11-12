@@ -8,6 +8,8 @@ const SHARED_BLOCK_CONTROLLER_FQCN = 'WeDevelop\\Grid\\Controllers\\SharedBlockC
  * Returns the global SilverStripe CMS configuration object.
  *
  * @throws ConfigError if the admin bundle has not loaded
+ *
+ * @internal Exported for tests; production code reaches it only from this file.
  */
 export function getConfig(): SilverStripeConfig {
   const config = window.ss?.config

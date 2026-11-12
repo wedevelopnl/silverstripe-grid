@@ -11,6 +11,7 @@ import { getViewports } from '@/utils/gridAdapter'
  * or the bridge lifecycle.
  */
 
+/** @internal Exported for tests; production code reaches it only from this file. */
 export const STYLE_TAG_ID = 'grid-preview-viewport-styles'
 
 /**
@@ -21,6 +22,8 @@ export const STYLE_TAG_ID = 'grid-preview-viewport-styles'
  * one. The 500px floor keeps narrow mobile views usable; the 900px
  * cap keeps wide desktop previews from overflowing a typical
  * split-mode panel.
+ *
+ * @internal Exported for tests; production code reaches it only from this file.
  */
 export function heightForWidth(width: number): number {
   const floor = 500

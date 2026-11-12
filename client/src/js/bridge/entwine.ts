@@ -78,6 +78,8 @@ function readSchemaFromElement(element: HTMLElement): unknown {
 /**
  * Mount the grid editor into the given element. Idempotent: a second call
  * on an already-mounted element is a no-op.
+ *
+ * @internal Exported for tests; production code reaches it only from this file.
  */
 export function mountGridEditor(element: HTMLElement, schemaData: unknown): void {
   if (mountedRoots.has(element)) {
@@ -122,6 +124,8 @@ export function mountGridEditor(element: HTMLElement, schemaData: unknown): void
 /**
  * Unmount the grid editor from the given element if it was previously
  * mounted by this bridge. Safe to call on elements that were never mounted.
+ *
+ * @internal Exported for tests; production code reaches it only from this file.
  */
 export function unmountGridEditor(element: HTMLElement): void {
   const root = mountedRoots.get(element)
