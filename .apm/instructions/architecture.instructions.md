@@ -113,6 +113,12 @@ docs/images/          # Generated doc screenshots — regenerate, never hand-edi
 - `--skip-type` resolves via `is_a()` → must run inside the container, where the framework autoloads
 - Tests are not scanned: a class only tests reference is still reported
 
+## Knip
+
+- Frontend counterpart of class-leak: unused files, exports, exported types and npm deps. Config `knip.json`; `npm run knip`, in `npm run qa`, `task qa`/`qa-js` (`qa-knip`) and CI `js-qa`
+- A file loaded outside the JS import graph (PHP, Docker, a regex `testMatch`, a tool's path option) → add it to `knip.json` `entry`; a dependency run only by hand → `ignoreDependencies`. Document the reason in `CONTRIBUTING.md`, since JSON has no comments
+- `client/src/js/types/*.ts` are entries: `vite-plugin-dts` ships them to consumers as `.d.ts`, so their exports are public API — never strip an export there to satisfy knip
+
 ## Rector
 
 - Config: `.docker/app/rector.php` (COPYed into the image at build, **not** volume-mounted — after editing, rebuild the image with `task build` or push the file with `docker compose -f .docker/compose.yml cp .docker/app/rector.php app:/app/rector.php`)

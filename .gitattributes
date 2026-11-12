@@ -43,6 +43,7 @@
 /src/**/CLAUDE.md        export-ignore
 /Taskfile.yml            export-ignore
 /biome.json              export-ignore
+/knip.json               export-ignore
 /package.json            export-ignore
 /package-lock.json       export-ignore
 /playwright.config.ts    export-ignore

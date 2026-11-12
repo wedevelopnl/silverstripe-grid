@@ -1,0 +1,23 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "entry": [
+    "client/src/js/types/*.ts",
+    "!client/src/js/types/*.test.ts",
+    "client/src/styles/admin-toolbar-menu.css",
+    "stryker-ignorers.mjs",
+    "tests/E2E/global.setup.ts",
+    "tests/E2E/screenshots/docs.screenshots.ts"
+  ],
+  "project": [
+    "client/src/js/**/*.{ts,tsx}",
+    "client/src/styles/**/*.css",
+    "client/js/**/*.js",
+    "tests/E2E/**/*.ts",
+    "scripts/**/*.mjs",
+    "*.{ts,mts,mjs}"
+  ],
+  "playwright": {
+    "config": ["playwright.config.ts", "playwright.modules.config.ts", "playwright.docs.config.ts"]
+  },
+  "ignoreDependencies": ["tailwindcss", "@tailwindcss/cli"]
+}

@@ -80,19 +80,28 @@ See the [E2E fixture protocol](docs/testing/e2e-fixtures.md) for the YAML fixtur
 
 | Command | Description |
 |---------|-------------|
-| `task qa` | **Full QA suite, run this before pushing.** PHPStan (plus a PHP 8.5 pass), Rector dry-run, class-leak, PHP coverage, Biome lint, format check, typecheck, the i18n parity check, the icon-class check, Vitest, and the Vite build — in parallel |
-| `task qa-js` | JS-only QA (Biome, format check, typecheck, Vitest, Vite build) |
+| `task qa` | **Full QA suite, run this before pushing.** PHPStan (plus a PHP 8.5 pass), Rector dry-run, class-leak, PHP coverage, Biome lint, format check, typecheck, knip, the i18n parity check, the icon-class check, Vitest, and the Vite build — in parallel |
+| `task qa-js` | JS-only QA (Biome, format check, typecheck, knip, Vitest, Vite build) |
 | `task analyse` | PHPStan static analysis (level max + Silverstan, 100% type coverage) |
 | `task rector-dry` / `task rector` | Preview / apply Rector refactorings |
 | `task class-leak` | Fail on any class in `src/` that nothing references (see below) |
 | `npm run lint` | Biome lint (JS/TS + CSS) |
 | `npm run format` | Biome format --write (JS/TS + CSS) |
 | `npm run typecheck` | TypeScript type checking |
+| `npm run knip` | Fail on any frontend file, export or npm dependency that nothing uses (see below) |
 | `npm run i18n:check` | Dry-run string collection + locale parity check |
 
 CI runs the same checks as separate jobs, plus a check that the committed build output (`client/dist`, `client/lang`) is up to date.
 
 `task class-leak` only reads PHP, so a class that SilverStripe reaches solely through YAML config or class-manifest discovery looks unused to it. Extensions, Injector factories, build tasks, reports and admin controllers are skipped by parent type. A class that is wired up only as a YAML Injector binding and has none of those parents must be added by FQCN to the `--skip-type` list in the `CLASS_LEAK` variable in `Taskfile.yml`. Only `src/` is scanned, so a class that only tests reference is still reported.
+
+`npm run knip` is the frontend counterpart: it follows the import graph from the entry points that `knip.json` and knip's plugins (Vite, Vitest, Playwright, Stryker, Biome) declare, and reports files, exports and npm dependencies nothing reaches. Anything loaded from outside that graph looks unused to it, so `knip.json` declares it:
+
+- `entry` lists files that a tool loads by a path or pattern knip cannot read: `client/src/js/types/*.ts` (shipped as `.d.ts` files to consumers of the package, so their exports are public API), `admin-toolbar-menu.css` (a second Vite build input), `stryker-ignorers.mjs` (a Stryker plugin path), and the two Playwright files matched by a regex `testMatch`.
+- `project` limits the scan to source files, which keeps out the build output (`client/dist`), the compiled translations PHP loads (`client/lang`) and the Docker testbed assets.
+- `ignoreDependencies` lists `tailwindcss` and `@tailwindcss/cli`, which are run by hand to regenerate the testbed stylesheet (`.docker/assets/css/README.md`).
+
+Code that only tests reach still counts as used.
 
 ## Coding standards
 
