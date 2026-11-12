@@ -9,7 +9,7 @@ import { NodeIdentity, type NodeKey, type NodeRef } from '@/types/identity'
 import { applyReorder } from '@/utils/applyReorder'
 import type { OverRectSnapshot } from '@/utils/collisionDetection'
 
-export interface CollisionRefs {
+interface CollisionRefs {
   readonly hasPendingMoveRef: MutableRefObject<boolean>
   readonly pendingContainerItemsRef: MutableRefObject<ReadonlySet<string | number> | null>
   readonly sourceContainerItemsRef: MutableRefObject<ReadonlySet<string | number> | null>

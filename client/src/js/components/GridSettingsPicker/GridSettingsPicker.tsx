@@ -3,8 +3,6 @@ import { useMemo } from 'react'
 import { useRovingPopup } from '@/hooks/useRovingPopup'
 import type { GridSettingsOption } from '@/types/gridSettings'
 
-export type { GridSettingsOption } from '@/types/gridSettings'
-
 interface GridSettingsPickerProps {
   readonly label: string
   readonly options: readonly GridSettingsOption[]

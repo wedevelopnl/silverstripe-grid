@@ -1,7 +1,7 @@
 // biome-ignore-all lint/suspicious/noUnnecessaryConditions: biome's inference treats the Enter/' ' comparisons as unreachable, but they handle real KeyboardEvent.key values at runtime.
 import { useRovingPopup } from '@/hooks/useRovingPopup'
 
-export interface PlacementMenuItem {
+interface PlacementMenuItem {
   /** Stable React key; also the item's `data-route` for tests and styling. */
   readonly key: string
   /** Already translated. */

@@ -7,7 +7,7 @@ import { containsSharedBlockPlacement } from '@/utils/sharedBlockNesting'
 import { useEditorRoot } from './GridEditorContext'
 import { useConvertToSharedBlock } from './useSharedBlockMutations'
 
-export interface ConvertToSharedDialogState {
+interface ConvertToSharedDialogState {
   readonly isOpen: boolean
   readonly title: string
   readonly message: string

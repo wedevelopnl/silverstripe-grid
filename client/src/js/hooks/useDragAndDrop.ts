@@ -21,7 +21,7 @@ import { resolveDropAxis } from '@/utils/resolveDropAxis'
 import { resolveDropPlacement } from '@/utils/resolveDropPlacement'
 import { resolveInsertDirection } from '@/utils/resolveInsertDirection'
 
-export interface DragState {
+interface DragState {
   activeType: DraggableType
   activeNode: ElementNode
 }
@@ -36,7 +36,7 @@ export interface UseDragAndDropOptions {
   ) => void
 }
 
-export interface DndContextProps {
+interface DndContextProps {
   sensors: SensorDescriptor<SensorOptions>[]
   collisionDetection: CollisionDetection
   onDragStart: (event: DragStartEvent) => void
