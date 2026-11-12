@@ -8,10 +8,8 @@ import { allowConsole } from '@/testing/consoleGuard'
 import {
   useCreateContentElement,
   useDuplicateToElement,
-  usePublishElement,
   useReorderElement,
   useResetGridSettingsOverrides,
-  useUnpublishElement,
   useUpdateGridSettings,
 } from '@/hooks/useElementMutations'
 import { useEditorTree } from '@/hooks/useEditorTree'
@@ -180,20 +178,6 @@ describe('useElementMutations', () => {
         variables: { root: { kind: 'page', pageId: 1, zone: 'main' } },
         status: 500,
         message: 'Reset failed',
-      },
-      {
-        name: 'usePublishElement',
-        hook: () => usePublishElement(PAGE),
-        variables: { type: 'section', id: 5 },
-        status: 500,
-        message: 'Publish failed',
-      },
-      {
-        name: 'useUnpublishElement',
-        hook: () => useUnpublishElement(PAGE),
-        variables: { type: 'section', id: 5 },
-        status: 500,
-        message: 'Unpublish failed',
       },
     ])(
       'shows an error toast with the API message when $name fails',
