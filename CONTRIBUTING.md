@@ -106,6 +106,8 @@ Anything loaded from outside the import graph looks unused, so `knip.json` decla
 - `project` limits the scan to source files, which keeps out the build output (`client/dist`), the compiled translations PHP loads (`client/lang`) and the Docker testbed assets.
 - `ignoreDependencies` lists `tailwindcss` and `@tailwindcss/cli`, which are run by hand to regenerate the testbed stylesheet (`.docker/assets/css/README.md`).
 
+knip loads the Playwright configs to read their settings, and they throw when `.docker/.env` holds no testbed ports. In a fresh checkout, run `.docker/env.sh` first (`task up` does this too; neither needs Docker running for this step).
+
 The default run passes `--no-config-hints`: in that mode the Vite plugin already supplies `bundle.ts`, so knip calls the explicit entry redundant, even though production mode needs it. The strict run still reports configuration hints.
 
 ## Coding standards
