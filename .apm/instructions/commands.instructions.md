@@ -23,12 +23,13 @@ applyTo: "**/*"
 | `npm run i18n:collect` | Collect JS i18n strings |
 | `npm run i18n:check` | Dry-run collect + parity check |
 | `npm run check:icons` | Fail on any `font-icon-*` class the admin font does not define |
+| `npm run knip` | Fail on any unused frontend file, export or npm dependency (`knip.json`) |
 | `npm run test:e2e` | Run Playwright E2E tests |
 | `npm run test:e2e:ui` | Playwright with interactive UI |
 | `npm run test:e2e:debug` | Playwright in debug mode |
 | `npm run test:e2e:modules` | Playwright against the optional-modules testbed (`playwright.modules.config.ts`) |
 | `npm run docs:screenshots` | Regenerate `docs/images/` from the `docs-page` fixture (separate config; not part of `test:e2e`) |
-| `npm run qa` | Full QA: lint + format:check + typecheck + test + i18n:check + check:icons + vite build |
+| `npm run qa` | Full QA: lint + format:check + typecheck + knip + test + i18n:check + check:icons + vite build |
 
 ## PHP (via Task — requires Docker)
 
@@ -69,5 +70,5 @@ Run with [Task](https://taskfile.dev) (`task <name>`). Install: `brew install go
 | `task dev-build` | Run dev/build to rebuild database and manifest |
 | `task seed-fixture` | Seed the dev DB with an E2E fixture (`FIXTURE=<name>`, default `complex-page`; idempotent) |
 | `task flush-modules` / `dev-build-modules` / `seed-fixture-modules` | Same as the unsuffixed task, against the optional-modules testbed |
-| `task qa` | Full QA suite (PHPStan 8.3 + 8.5 + Rector + class-leak + PHP coverage + JS QA + i18n + icons, parallel) |
-| `task qa-js` | JavaScript QA (Biome + typecheck + Vitest + vite build) |
+| `task qa` | Full QA suite (PHPStan 8.3 + 8.5 + Rector + class-leak + PHP coverage + JS QA (incl. knip) + i18n + icons, parallel) |
+| `task qa-js` | JavaScript QA (Biome + typecheck + knip + Vitest + vite build) |

@@ -364,11 +364,12 @@ tasks:
       - task: qa-checks
 
   qa-js:
-    desc: Run JavaScript QA (lint + format + typecheck + test + build, in parallel)
+    desc: Run JavaScript QA (lint + format + typecheck + knip + test + build, in parallel)
     deps:
       - qa-lint
       - qa-format
       - qa-typecheck
+      - qa-knip
       - qa-test-js
       - qa-build
 
@@ -385,6 +386,7 @@ tasks:
       - qa-lint
       - qa-format
       - qa-typecheck
+      - qa-knip
       - qa-i18n
       - qa-icons
       - qa-test-js
@@ -463,6 +465,13 @@ tasks:
       - 'echo "==> [typecheck] running tsc..."'
       - npm run typecheck
       - 'echo "==> [typecheck] done"'
+
+  qa-knip:
+    internal: true
+    cmds:
+      - 'echo "==> [knip] checking for unused files, exports and dependencies..."'
+      - npm run knip
+      - 'echo "==> [knip] done"'
 
   qa-test-js:
     internal: true
