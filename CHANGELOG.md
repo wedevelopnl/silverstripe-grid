@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- **BREAKING (custom API consumers): `PATCH /admin/grid/api/setPublished` is gone** — the route published or unpublished a single element on a page on its own. The editor has no such action: a page's blocks are published by publishing the page, and the client code that once called the route was removed as unused. A request to it now returns 404. Tooling built on it should publish the page instead (`$page->publishRecursive()`). The block library's `PATCH /admin/grid-shared-blocks/api/setPublished` is unaffected. This supersedes the 6.0.0-beta.1 note that `api/publish` and `api/unpublish` collapsed into `api/setPublished`.
+
 ## [6.0.0-beta.6] - 2026-11-10
 
 The headline is the **SS5→SS6 migration**: it now reads a SilverStripe 5 site's elements where elemental 5.x stores them, converts every language of a Fluent site from its own content area, gives each legacy block its own Column, and carries a project's row settings and the items its blocks own across — behind two explicit acknowledgements that replace `--force`. Alongside it come a Form element for `silverstripe/userforms`, cache keys through `keys-for-cache`, and shared block deletes that act in every language.

@@ -67,7 +67,6 @@ class GridController extends GridApiController
         'GET api/readTree/$PageID!/$Zone!/version/$Version!' => 'apiReadTreeAtVersion',
         'GET api/readTree/$PageID!/$Zone!' => 'apiReadTree',
         'POST api/create' => 'apiCreate',
-        'PATCH api/setPublished' => 'apiSetPublished',
         'DELETE api/delete' => 'apiDelete',
         'POST api/duplicate' => 'apiDuplicate',
         'POST api/duplicateTo' => 'apiDuplicateTo',
@@ -84,7 +83,6 @@ class GridController extends GridApiController
         'apiReadTree',
         'apiReadTreeAtVersion',
         'apiCreate',
-        'apiSetPublished',
         'apiDelete',
         'apiDuplicate',
         'apiDuplicateTo',
@@ -294,42 +292,6 @@ class GridController extends GridApiController
         }
 
         $this->touchOwningPage($result->unwrap());
-
-        return $this->jsonSuccess(204);
-    }
-
-    public function apiSetPublished(HTTPRequest $request): HTTPResponse
-    {
-        $data = $this->parseJsonBody($request);
-
-        $published = $data['published'] ?? null;
-        if (!is_bool($published)) {
-            $this->jsonError(400);
-        }
-
-        $parseResult = $this->requestBodyParser->parseElementRef($data);
-        if ($parseResult->isErr()) {
-            $this->jsonError(400);
-        }
-
-        $ref = $parseResult->unwrap();
-
-        $permissionCheck = $published
-            ? static fn (GridElement $e): bool => $e->canPublish()
-            : static function (GridElement $e): bool {
-                $result = $e->canUnpublish();
-                assert(is_bool($result));
-
-                return $result;
-            };
-
-        $element = $this->requireElementWithPermission($ref, $permissionCheck);
-
-        if ($published) {
-            $element->publishRecursive();
-        } else {
-            $element->doUnpublish();
-        }
 
         return $this->jsonSuccess(204);
     }
