@@ -22,11 +22,9 @@ import {
   fetchZones,
   normaliseTreeResponse,
   placeSharedBlock,
-  publishElement,
   reorderElement,
   resetGridSettingsOverrides,
   setSharedBlockPublished,
-  unpublishElement,
   updateGridSettings,
 } from './endpoints'
 
@@ -200,31 +198,6 @@ describe('createElement', () => {
     expect(JSON.parse(init?.body as string)).toEqual({
       containerType: 'row',
       parent: { type: 'section', id: 10 },
-    })
-  })
-})
-
-describe('publishElement', () => {
-  it('sends PATCH to /api/setPublished with element NodeRef and published:true', async () => {
-    await publishElement({ type: 'section', id: 5 })
-    const [url, init] = getFetchCalls()[0]
-    expect(url).toBe('/admin/grid/api/setPublished')
-    expect(init?.method).toBe('PATCH')
-    expect(JSON.parse(init?.body as string)).toEqual({
-      element: { type: 'section', id: 5 },
-      published: true,
-    })
-  })
-})
-
-describe('unpublishElement', () => {
-  it('sends PATCH to /api/setPublished with element NodeRef and published:false', async () => {
-    await unpublishElement({ type: 'section', id: 5 })
-    const [url, init] = getFetchCalls()[0]
-    expect(url).toBe('/admin/grid/api/setPublished')
-    expect(JSON.parse(init?.body as string)).toEqual({
-      element: { type: 'section', id: 5 },
-      published: false,
     })
   })
 })

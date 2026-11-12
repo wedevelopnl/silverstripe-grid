@@ -13,10 +13,8 @@ import {
   createElement,
   duplicateElement,
   duplicateToElement,
-  publishElement,
   reorderElement,
   resetGridSettingsOverrides,
-  unpublishElement,
   updateGridSettings,
 } from '@/api/endpoints'
 import type { ApiError } from '@/api/errors'
@@ -70,20 +68,6 @@ export function useCreateElement(root: EditorRoot) {
 export function useCreateContentElement(root: EditorRoot) {
   return useMutation<void, ApiError, CreateContentElementParams>({
     mutationFn: createContentElement,
-    ...useStandardMutationOptions(root),
-  })
-}
-
-export function usePublishElement(root: EditorRoot) {
-  return useMutation<void, ApiError, NodeRef>({
-    mutationFn: publishElement,
-    ...useStandardMutationOptions(root),
-  })
-}
-
-export function useUnpublishElement(root: EditorRoot) {
-  return useMutation<void, ApiError, NodeRef>({
-    mutationFn: unpublishElement,
     ...useStandardMutationOptions(root),
   })
 }

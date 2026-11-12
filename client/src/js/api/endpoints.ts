@@ -57,6 +57,8 @@ function treeUrl(root: EditorRoot): string {
  * re-attaches the shared map to every container node BY REFERENCE, so the
  * internal `ElementNode` model and every component consuming
  * `node.allowedTypes` are unchanged, at no per-node memory cost.
+ *
+ * @internal Exported for tests; production code reaches it only from this file.
  */
 export function normaliseTreeResponse(raw: unknown): TreeApiResponse {
   const parsed = v.parse(treeApiResponseWireSchema, raw)
@@ -170,16 +172,6 @@ export interface CreateElementParams {
 export async function createElement(params: CreateElementParams): Promise<void> {
   const base = getControllerLink()
   await apiPost(`${base}/api/create`, params)
-}
-
-export async function publishElement(element: NodeRef): Promise<void> {
-  const base = getControllerLink()
-  await apiPatch(`${base}/api/setPublished`, { element, published: true })
-}
-
-export async function unpublishElement(element: NodeRef): Promise<void> {
-  const base = getControllerLink()
-  await apiPatch(`${base}/api/setPublished`, { element, published: false })
 }
 
 export async function archiveElement(element: NodeRef): Promise<void> {
