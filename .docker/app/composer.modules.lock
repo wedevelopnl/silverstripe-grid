@@ -893,16 +893,16 @@
         },
         {
             "name": "guzzlehttp/psr7",
-            "version": "2.13.2",
+            "version": "2.13.3",
             "source": {
                 "type": "git",
                 "url": "https://github.com/guzzle/psr7.git",
-                "reference": "adee536f95101929f262b8c59e8a61472f347d58"
+                "reference": "6d3cd8285a97eaa352956a4ada92fa03ecce1c4e"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/guzzle/psr7/zipball/adee536f95101929f262b8c59e8a61472f347d58",
-                "reference": "adee536f95101929f262b8c59e8a61472f347d58",
+                "url": "https://api.github.com/repos/guzzle/psr7/zipball/6d3cd8285a97eaa352956a4ada92fa03ecce1c4e",
+                "reference": "6d3cd8285a97eaa352956a4ada92fa03ecce1c4e",
                 "shasum": ""
             },
             "require": {
@@ -992,7 +992,7 @@
             ],
             "support": {
                 "issues": "https://github.com/guzzle/psr7/issues",
-                "source": "https://github.com/guzzle/psr7/tree/2.13.2"
+                "source": "https://github.com/guzzle/psr7/tree/2.13.3"
             },
             "funding": [
                 {
@@ -1008,8 +1008,8 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-10-17T23:49:46+00:00",
-            "published-time": "2026-10-17T23:51:00+00:00"
+            "time": "2026-11-12T15:57:42+00:00",
+            "published-time": "2026-11-12T15:58:42+00:00"
         },
         {
             "name": "intervention/gif",
@@ -2992,16 +2992,16 @@
         },
         {
             "name": "silverstripe/framework",
-            "version": "6.3.4",
+            "version": "6.3.7",
             "source": {
                 "type": "git",
                 "url": "https://github.com/silverstripe/silverstripe-framework.git",
-                "reference": "c56d1f11073fdf87d5512d4627915a8490cf1492"
+                "reference": "10d86b5a9a925151a337c7e3f739177b376b8a5d"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/silverstripe/silverstripe-framework/zipball/c56d1f11073fdf87d5512d4627915a8490cf1492",
-                "reference": "c56d1f11073fdf87d5512d4627915a8490cf1492",
+                "url": "https://api.github.com/repos/silverstripe/silverstripe-framework/zipball/10d86b5a9a925151a337c7e3f739177b376b8a5d",
+                "reference": "10d86b5a9a925151a337c7e3f739177b376b8a5d",
                 "shasum": ""
             },
             "require": {
@@ -3136,10 +3136,10 @@
             ],
             "support": {
                 "issues": "https://github.com/silverstripe/silverstripe-framework/issues",
-                "source": "https://github.com/silverstripe/silverstripe-framework/tree/6.3.4"
+                "source": "https://github.com/silverstripe/silverstripe-framework/tree/6.3.7"
             },
-            "time": "2026-11-09T23:21:08+00:00",
-            "published-time": "2026-11-09T23:36:51+00:00"
+            "time": "2026-11-11T23:53:21+00:00",
+            "published-time": "2026-11-12T00:08:46+00:00"
         },
         {
             "name": "silverstripe/mimevalidator",
@@ -3356,16 +3356,16 @@
         },
         {
             "name": "silverstripe/reports",
-            "version": "6.3.0",
+            "version": "6.3.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/silverstripe/silverstripe-reports.git",
-                "reference": "e05e8bf707053d97f91c90359637f655bde72c7d"
+                "reference": "d4ef1a4440502c7036c5ccd91d986f165bc2a66d"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/silverstripe/silverstripe-reports/zipball/e05e8bf707053d97f91c90359637f655bde72c7d",
-                "reference": "e05e8bf707053d97f91c90359637f655bde72c7d",
+                "url": "https://api.github.com/repos/silverstripe/silverstripe-reports/zipball/d4ef1a4440502c7036c5ccd91d986f165bc2a66d",
+                "reference": "d4ef1a4440502c7036c5ccd91d986f165bc2a66d",
                 "shasum": ""
             },
             "require": {
@@ -3422,10 +3422,10 @@
             ],
             "support": {
                 "issues": "https://github.com/silverstripe/silverstripe-reports/issues",
-                "source": "https://github.com/silverstripe/silverstripe-reports/tree/6.3.0"
+                "source": "https://github.com/silverstripe/silverstripe-reports/tree/6.3.1"
             },
-            "time": "2026-08-27T01:15:23+00:00",
-            "published-time": "2026-10-28T03:33:31+00:00"
+            "time": "2026-11-06T01:07:35+00:00",
+            "published-time": "2026-11-10T17:21:44+00:00"
         },
         {
             "name": "silverstripe/segment-field",
@@ -6497,16 +6497,16 @@
         },
         {
             "name": "tractorcow/silverstripe-fluent",
-            "version": "8.2.3",
+            "version": "8.2.4",
             "source": {
                 "type": "git",
                 "url": "https://github.com/tractorcow-farm/silverstripe-fluent.git",
-                "reference": "5a0d68bd989784044f210a35137d8f23d0126c54"
+                "reference": "29b1e32ce7c09ff7ec0de638c17434e3c2caa24b"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/tractorcow-farm/silverstripe-fluent/zipball/5a0d68bd989784044f210a35137d8f23d0126c54",
-                "reference": "5a0d68bd989784044f210a35137d8f23d0126c54",
+                "url": "https://api.github.com/repos/tractorcow-farm/silverstripe-fluent/zipball/29b1e32ce7c09ff7ec0de638c17434e3c2caa24b",
+                "reference": "29b1e32ce7c09ff7ec0de638c17434e3c2caa24b",
                 "shasum": ""
             },
             "require": {
@@ -6568,10 +6568,10 @@
             ],
             "support": {
                 "issues": "http://github.com/tractorcow-farm/silverstripe-fluent/issues",
-                "source": "https://github.com/tractorcow-farm/silverstripe-fluent/tree/8.2.3"
+                "source": "https://github.com/tractorcow-farm/silverstripe-fluent/tree/8.2.4"
             },
-            "time": "2026-11-05T22:31:28+00:00",
-            "published-time": "2026-11-05T22:35:55+00:00"
+            "time": "2026-11-13T02:01:42+00:00",
+            "published-time": "2026-11-13T02:05:31+00:00"
         },
         {
             "name": "unclecheese/display-logic",
@@ -6782,16 +6782,16 @@
         },
         {
             "name": "wedevelopnl/silverstripe-media-field",
-            "version": "6.0.0",
+            "version": "6.0.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/wedevelopnl/silverstripe-media-field.git",
-                "reference": "9d68940dca6875b2f9db366f8d519a44db75d88d"
+                "reference": "42b02ab1e3967993f9460648032073b97e0a410d"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/wedevelopnl/silverstripe-media-field/zipball/9d68940dca6875b2f9db366f8d519a44db75d88d",
-                "reference": "9d68940dca6875b2f9db366f8d519a44db75d88d",
+                "url": "https://api.github.com/repos/wedevelopnl/silverstripe-media-field/zipball/42b02ab1e3967993f9460648032073b97e0a410d",
+                "reference": "42b02ab1e3967993f9460648032073b97e0a410d",
                 "shasum": ""
             },
             "require": {
@@ -6801,14 +6801,8 @@
                 "silverstripe/cms": "^6",
                 "unclecheese/display-logic": "^4.0"
             },
-            "require-dev": {
-                "cambis/silverstan": "^2.1"
-            },
             "type": "library",
             "extra": {
-                "branch-alias": {
-                    "dev-main": "6.x-dev"
-                },
                 "installer-name": "silverstripe-media-field"
             },
             "autoload": {
@@ -6817,6 +6811,9 @@
                 }
             },
             "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
             "authors": [
                 {
                     "name": "WeDevelop",
@@ -6831,10 +6828,10 @@
             ],
             "support": {
                 "issues": "https://github.com/wedevelopnl/silverstripe-media-field/issues",
-                "source": "https://github.com/wedevelopnl/silverstripe-media-field/tree/6.0.0"
+                "source": "https://github.com/wedevelopnl/silverstripe-media-field/tree/6.0.1"
             },
-            "time": "2026-11-10T10:48:06+00:00",
-            "published-time": "2026-11-10T10:48:32+00:00"
+            "time": "2026-11-12T07:49:50+00:00",
+            "published-time": "2026-11-12T07:52:02+00:00"
         }
     ],
     "packages-dev": [
@@ -7302,16 +7299,16 @@
         },
         {
             "name": "entropy/entropy",
-            "version": "0.4.36",
+            "version": "0.4.37",
             "source": {
                 "type": "git",
                 "url": "https://github.com/TomasVotruba/entropy.git",
-                "reference": "9f08272a96275d22a9d9808a32581392920626db"
+                "reference": "57bd06e1652f3c38148944b4880ee3b6e6284da3"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/TomasVotruba/entropy/zipball/9f08272a96275d22a9d9808a32581392920626db",
-                "reference": "9f08272a96275d22a9d9808a32581392920626db",
+                "url": "https://api.github.com/repos/TomasVotruba/entropy/zipball/57bd06e1652f3c38148944b4880ee3b6e6284da3",
+                "reference": "57bd06e1652f3c38148944b4880ee3b6e6284da3",
                 "shasum": ""
             },
             "require": {
@@ -7347,10 +7344,10 @@
             "description": "Entropy framework",
             "support": {
                 "issues": "https://github.com/TomasVotruba/entropy/issues",
-                "source": "https://github.com/TomasVotruba/entropy/tree/0.4.36"
+                "source": "https://github.com/TomasVotruba/entropy/tree/0.4.37"
             },
-            "time": "2026-10-26T16:46:17+00:00",
-            "published-time": "2026-10-26T16:46:43+00:00"
+            "time": "2026-11-14T16:57:42+00:00",
+            "published-time": "2026-11-14T16:57:58+00:00"
         },
         {
             "name": "fidry/cpu-core-counter",
@@ -8986,16 +8983,16 @@
         },
         {
             "name": "rector/rector",
-            "version": "2.8.4",
+            "version": "2.8.5",
             "source": {
                 "type": "git",
                 "url": "https://github.com/rectorphp/rector.git",
-                "reference": "55acbd956d7e3907f7d21aab54edd68a310609e6"
+                "reference": "bf2982e3e2b8dfbcb43e5589fa301431cb1e479e"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/rectorphp/rector/zipball/55acbd956d7e3907f7d21aab54edd68a310609e6",
-                "reference": "55acbd956d7e3907f7d21aab54edd68a310609e6",
+                "url": "https://api.github.com/repos/rectorphp/rector/zipball/bf2982e3e2b8dfbcb43e5589fa301431cb1e479e",
+                "reference": "bf2982e3e2b8dfbcb43e5589fa301431cb1e479e",
                 "shasum": ""
             },
             "require": {
@@ -9031,7 +9028,7 @@
             ],
             "support": {
                 "issues": "https://github.com/rectorphp/rector/issues",
-                "source": "https://github.com/rectorphp/rector/tree/2.8.4"
+                "source": "https://github.com/rectorphp/rector/tree/2.8.5"
             },
             "funding": [
                 {
@@ -9039,8 +9036,8 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-11-03T18:48:08+00:00",
-            "published-time": "2026-11-03T18:48:15+00:00"
+            "time": "2026-11-14T23:24:35+00:00",
+            "published-time": "2026-11-14T23:24:41+00:00"
         },
         {
             "name": "rregeer/phpunit-coverage-check",
@@ -10287,16 +10284,16 @@
         },
         {
             "name": "symfony/polyfill-php85",
-            "version": "v1.43.0",
+            "version": "v1.44.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/polyfill-php85.git",
-                "reference": "86a42cbcc07adc331481a5ab310a4024bfc227f6"
+                "reference": "94c794cb5ba51784bc259f11e9f128593297d8dc"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/polyfill-php85/zipball/86a42cbcc07adc331481a5ab310a4024bfc227f6",
-                "reference": "86a42cbcc07adc331481a5ab310a4024bfc227f6",
+                "url": "https://api.github.com/repos/symfony/polyfill-php85/zipball/94c794cb5ba51784bc259f11e9f128593297d8dc",
+                "reference": "94c794cb5ba51784bc259f11e9f128593297d8dc",
                 "shasum": ""
             },
             "require": {
@@ -10343,7 +10340,7 @@
                 "shim"
             ],
             "support": {
-                "source": "https://github.com/symfony/polyfill-php85/tree/v1.43.0"
+                "source": "https://github.com/symfony/polyfill-php85/tree/v1.44.0"
             },
             "funding": [
                 {
@@ -10363,8 +10360,8 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-09-25T15:46:47+00:00",
-            "published-time": "2026-09-30T10:23:32+00:00"
+            "time": "2026-10-30T15:20:09+00:00",
+            "published-time": "2026-11-15T14:20:22+00:00"
         },
         {
             "name": "symfony/process",
@@ -10765,16 +10762,16 @@
         },
         {
             "name": "webmozart/assert",
-            "version": "2.5.0",
+            "version": "2.5.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/webmozarts/assert.git",
-                "reference": "8a163706bbcac613733dba03f51e13b5eb1bb819"
+                "reference": "e578132c01bd0c64108386ab20d8217cd175ddec"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/webmozarts/assert/zipball/8a163706bbcac613733dba03f51e13b5eb1bb819",
-                "reference": "8a163706bbcac613733dba03f51e13b5eb1bb819",
+                "url": "https://api.github.com/repos/webmozarts/assert/zipball/e578132c01bd0c64108386ab20d8217cd175ddec",
+                "reference": "e578132c01bd0c64108386ab20d8217cd175ddec",
                 "shasum": ""
             },
             "require": {
@@ -10825,10 +10822,10 @@
             ],
             "support": {
                 "issues": "https://github.com/webmozarts/assert/issues",
-                "source": "https://github.com/webmozarts/assert/tree/2.5.0"
+                "source": "https://github.com/webmozarts/assert/tree/2.5.1"
             },
-            "time": "2026-10-05T23:14:19+00:00",
-            "published-time": "2026-10-05T23:14:25+00:00"
+            "time": "2026-11-15T13:41:13+00:00",
+            "published-time": "2026-11-15T13:41:42+00:00"
         },
         {
             "name": "wedevelopnl/silverstripe-e2e",
