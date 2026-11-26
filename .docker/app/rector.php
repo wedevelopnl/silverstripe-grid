@@ -15,8 +15,6 @@ return RectorConfig::configure()
         deadCode: true,
         codeQuality: true,
         typeDeclarations: true,
-        instanceOf: true,
-        earlyReturn: true,
         rectorPreset: true,
     )
     ->withPhpSets(php83: true)
