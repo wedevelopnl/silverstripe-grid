@@ -42,7 +42,7 @@
     "qs": "^6.16.0"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.6.8",
+    "@biomejs/biome": "^2.6.9",
     "@playwright/test": "^1.65.1",
     "@stryker-mutator/api": "^10.1.1",
     "@stryker-mutator/core": "^10.1.1",
